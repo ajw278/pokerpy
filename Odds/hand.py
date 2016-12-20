@@ -1,4 +1,3 @@
-from __future__ import print_function
 """=================================================================================================
 //  POKERPY :
 //  Python code for automated poker learning and playing.
@@ -14,7 +13,7 @@ from __future__ import print_function
 #hand.py 
 #Hand definitions: useful functions for hand definition and analysis
 
-
+from __future__ import print_function
 from __future__ import division
 from collections import namedtuple, Counter
 import random
