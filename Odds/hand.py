@@ -150,7 +150,7 @@ In: maximum value, number of suits
 Out: list containing type 'card' named tuple for each element of deck
 """
 def poker_deck(max_value=VALUES, number_of_kinds=KINDS):
-	return [ Card(value, kind) for value in range(max_value) for kind in range(number_of_kinds)]
-
+	deck=  [ Card(value, kind) for value in range(max_value) for kind in range(number_of_kinds)]
+	return deck
 
 
