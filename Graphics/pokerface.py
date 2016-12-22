@@ -244,6 +244,8 @@ def main():
 			- this is where the main logic of the game should be stored.
 			The exceptions to this should only be the graphical elements of the game.
 			"""
+
+"""TO REWRITE ALL OF THIS ONCE pokerpy.py IS COMPLETEISH"""
 			#State=0 --> init game
 			#State=1 --> deal
 			#State=2 --> play, blind

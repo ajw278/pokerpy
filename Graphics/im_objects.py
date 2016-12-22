@@ -1,3 +1,14 @@
+"""=================================================================================================
+//  POKERPY :
+//  Python code for automated poker learning and playing.
+//  https://github.com/ajw278/pokerpy.git
+//  Contact : ajwinter@ast.cam.ac.uk
+//  Contributors : Andrew Winter, Pablo Lemos Portela, Cameron Lemon
+//  Description : 
+//
+//  Last edited: 20/12/2016
+//================================================================================================="""
+
 from __future__ import print_function
 
 import pygame
@@ -46,34 +57,6 @@ class table_card(pygame.sprite.Sprite):
 		else:
 			self.up = False
 			self.image, self.rect = load.load_img('cback.jpg')
-
-
-def basic_AI(hand, table, chips, minbet):
-	return max(10, minbet)
-
-
-class player:
-	
-	def __init__(self, chips, num, AI_type):
-		self.bank = chips
-		self.order = num
-		if AI_type == None:
-			self.ai = None
-		elif AI_type == 'basic':
-			self.ai = basic_AI
-
-	def new_order(self, num):
-		self.order = num
-
-	def bet(hand, table, chips, minbet):
-		if self.ai!=None:
-			return self.ai(hand, table, chips)
-		else:
-			print('Bet error.')
-			sys.exit()
-
-
-
 	
 
 """
