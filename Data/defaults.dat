@@ -5,5 +5,4 @@ VALUES = 13
 CHIPS0 = 500
 SMALL_BLIND = 10
 BIG_BLIND = 20
-
-
+GAME = 'texasNL'

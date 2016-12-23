@@ -17,12 +17,18 @@ class poker_table
 """
 class poker_table:
 	def __init__(self, nplayers):
+		self.hand = []
 		self.pot = 0
 		self.invals = np.zeros(nplayers, dtype=int)
 	
 	def bid(self,value, player_id):
 		self.invals[player_id] += value
 		self.pot = int(np.sum(self.invals))
+
+	
+	def deal(self, cards):
+		for card in cards:
+			self.hand.append(card)
 
 	#Define payout routine here.. unsure exactly
 	#Have currently defined this to be pay to the
@@ -35,5 +41,6 @@ class poker_table:
 			payout += min(self.invals[ipay], self.invals[winner_id])
 			paybacks[ipay] = max(self.invals[ipay]-self.invals[winner_id],0)
 		self.pot = 0
+		self.hand=[]
 
 		return payout, paybacks

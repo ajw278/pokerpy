@@ -41,6 +41,10 @@ class player:
 		#If show is True, will allow AIs, humans to see hand
 		self.show = False
 
+		#Round status
+		self.betting = True
+		self.fold = False
+
 		#Player type, to be updated with model by AI
 		self.ptype = None
 
@@ -63,7 +67,17 @@ class player:
 			self.hand.append(card)
 	
 	def spend(self, value):
-		self.bank -= value
+		if self.bank>value:
+			self.bank -= value
+			return True
+		elif self.bank==value:
+			self.bank -= value
+			self.betting = False
+			return True
+		else:
+			return False
+			
+			
 
 	def win(self, value):
 		self.bank += chips

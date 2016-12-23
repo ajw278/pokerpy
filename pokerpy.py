@@ -26,6 +26,13 @@ import numpy as np
 
 
 """
+LIST OF RULES TO ADD:
+Head-to-head: small blind==dealer, big blind is the other --> change in order
+Game types: Texas Hold'em (No Limit, Limit, Pot Limit): texas(NL/L/PL), other types
+
+"""
+
+"""
 get_defaults
 In: defaults file name
 Out: default values
@@ -42,25 +49,27 @@ def read_defaults(defaults='defaults.dat'):
 	for line in lines:
 		try:
 			if 'NHUMAN' in line:
-				NHUMAN = int(re.findall(r"[-+]?\d*\.\d+|\d+", line)[0])
+				NHUMAN = int(re.findall(r"[-+]?\d*\.\d+|\d+", line.split('=')[1])[0])
 			elif 'NAI' in line:
-				NAI = int(re.findall(r"[-+]?\d*\.\d+|\d+", line)[0])
+				NAI = int(re.findall(r"[-+]?\d*\.\d+|\d+", line.split('=')[1])[0])
 			elif 'VALUES' in line:
-				VALUES = int(re.findall(r"[-+]?\d*\.\d+|\d+", line)[0])
+				VALUES = int(re.findall(r"[-+]?\d*\.\d+|\d+", line.split('=')[1])[0])
 			elif 'KINDS' in line:
-				KINDS = int(re.findall(r"[-+]?\d*\.\d+|\d+", line)[0])
+				KINDS = int(re.findall(r"[-+]?\d*\.\d+|\d+", line.split('=')[1])[0])
 			elif 'SMALL_BLIND' in line:
-				SMALL_BLIND = int(re.findall(r"[-+]?\d*\.\d+|\d+", line)[0])
+				SMALL_BLIND = int(re.findall(r"[-+]?\d*\.\d+|\d+", line.split('=')[1])[0])
 			elif 'BIG_BLIND' in line:
-				BIG_BLIND = int(re.findall(r"[-+]?\d*\.\d+|\d+", line)[0])
+				BIG_BLIND = int(re.findall(r"[-+]?\d*\.\d+|\d+", line.split('=')[1])[0])
 			elif 'CHIPS0' in line:
-				CHIPS0 = int(re.findall(r"[-+]?\d*\.\d+|\d+", line)[0])
+				CHIPS0 = int(re.findall(r"[-+]?\d*\.\d+|\d+", line.split('=')[1])[0])
+			elif 'GAME' in line:
+				GAME = str(line.split('=')[1]).strip()
 		except ValueError:
 			print('Error reading defaults.')
 			sys.exit()
 
 	try:
-		return NHUMAN, NAI, VALUES, KINDS, SMALL_BLIND, BIG_BLIND, CHIPS0
+		return NHUMAN, NAI, VALUES, KINDS, SMALL_BLIND, BIG_BLIND, CHIPS0, GAME
 	except ValueError:
 		print('Not all variables defined in defaults file.')
 		sys.exit()
@@ -68,10 +77,9 @@ def read_defaults(defaults='defaults.dat'):
 """
 deal:
 In: shuffled deck (list of tuples), number output cards, burn (True or False)
-NOTE: currently burning after each deal - is this right?
 Out: list of cards, shortened deck
 """
-def deal(shuffled_deck, ncards, burn=True):
+def deal(shuffled_deck, ncards, burn=False):
 	out_cards = []
 
 	for icard in range(ncards):
@@ -88,16 +96,16 @@ def deal(shuffled_deck, ncards, burn=True):
 
 """
 init_deal:
-In: shuffled deck (list of tuples), number of players, burn (True or False)
+In: shuffled deck (list of tuples), number of players
 Out: list of hands, reduced deck
 """
-def init_deal(shuffled_deck, nplayers, mode='texas', burn=True):
+def init_deal(shuffled_deck, nplayers, mode='texasNL'):
 
 	all_hands = []
 
-	if mode=='texas':
+	if mode=='texasNL':
 		for iplayer in range(nplayers):
-			cards, shuffled_deck = deal(shuffled_deck, 2, burn=burn)
+			cards, shuffled_deck = deal(shuffled_deck, 2, burn=False)
 			all_hands.append(cards)
 	else:
 		print('Mode not implemented.')
@@ -161,36 +169,125 @@ def assign_hand(dealer, players, hands):
 		for hand_no in hands_all:
 			if players[plyr_key].order==(dealer+hand_no+1)%nplayers:
 				players[plyr_key].deal_cards(hands[hand_no])
-				print(dealer, plyr_key, hand_no, hands[hand_no], '\n**********\n')
-		
 	
-	return players
+	return None
+
+
+"""
+get_bet
+Take betting decision from command line
+In: min bet, max bet, multiple of bet, players, key, table
+"""
+def get_bet(minimum, maximum,  players,plyrkey, table,mindiff = 5, blind=None):
+	bet = minimum-10
+	while bet<minimum or bet>maximum or bet%mindiff!=0:
+		print('("f" - fold, "F - fold and show hand,  "h" - see hand, "t" - show table hand)')
+		bet = raw_input('Bet (in multiples %s) between %d and %d: ' %(mindiff, minimum, maximum))
+		if bet=='h':
+			print('Hand:', players[plyrkey].hand, '\nChips: %d' %(players[plyrkey].bank))
+		elif bet =='t':
+			print('Table: ', table.hand, '\nPot: %d' %(table.pot))
+		elif bet=='f' or bet=='F':
+			break
+
+		if type(bet)!=int:
+			bet=minimum-10
+
+	return bet
+
+"""
+blind_round
+
+"""
+def blind_round(players, sblind, bblind, table, game='texasNL'):
+	nplayers = len(players)
+	inplayers = nplayers
+	bet=0
+	current=0
+	temp_round_def = [0,1,2,3,4, 5, 6, 7, 8]
+	if 'texasNL' in game:
+		for iround in range(len(temp_round_def)): 
+			inplayers = 0
+			for plkey in players:
+				print(plkey)
+				if players[plkey].order==iround%nplayers and players[plkey].betting:
+					if iround==0:
+						print('%s bets small blind: %d' %(plkey, sblind))
+						players[plkey].spend(sblind)
+						new_bet=sblind
+					elif iround==1:
+						print('%s bets big blind: %d' %(plkey, bblind))
+						players[plkey].spend(bblind)
+						new_bet=sblind
+					else:
+						print(players[plkey].ai)
+						if players[plkey].ai == None:
+							new_bet = get_bet(max(bblind, current), players[plkey].bank, players, plkey,table)
+
+				if not players[plkey].fold:
+					inplayers+=1
+			if type(new_bet)==int:
+				current=max(current, new_bet)
+			
+			bet=new_bet
+			#Define here current min bet size
+			#Also define here number of people still in
+
+	return None
+
+"""
+flop/turn/river
+take the shuffled deck and deal flop/turn/river (updates poker table)
+In: random card order, poker table
+Out: deck after flop/turn/river, poker table after flop
+"""
+def flop(deck, table):
+	flop_cards, deck = deal(deck, 3, burn=True)
+	table.hand.deal(flop_cards)
+	return deck
+
+def turn(deck, table):
+	turn_cards, deck = deal(deck, 1, burn=True)
+	table.hand.deal(turn_cards)
+	return deck
+
+def river(deck, table):
+	river_cards, deck = deal(deck, 1, burn=True)
+	table.hand.deal(river_cards)
+	return deck
 
 
 """
 play_hand
 In: small blind, big blind, player dictionary, dealer index, exit signal
 """
-def play_hand(sblind, bblind, players, dealer, exit):
+def play_hand(sblind, bblind, players, dealer, table, exit, game='texasNL'):
 	DECK = init_deck()
 	NPLAYERS = len(players)
 	HANDS, DECK = init_deal(DECK, NPLAYERS)
-	players  = assign_hand(dealer, players, HANDS)
-
-
+	assign_hand(dealer, players, HANDS)
+	blind_round(players, sblind, bblind,  table, game=game)
+	
+	#Added while testing before finished
 	exit.append(True)
-	return 0
-
-
+	return None
+"""
+main
+"""
 def main():
-	NHUMAN, NAI, VALUES, KINDS, SMALL_BLIND, BIG_BLIND, CHIPS0 = read_defaults()
+	print("****************************************")
+	print("****************POKERPY*****************")
+	print("****************************************")
+	print("Loading defaults...")
+	NHUMAN, NAI, VALUES, KINDS, SMALL_BLIND, BIG_BLIND, CHIPS0,GAME = read_defaults()
 	PLAYERS = get_players(NHUMAN, NAI, CHIPS0)
 	NPLAYERS = NHUMAN + NAI
 	TABLE = table.poker_table(NPLAYERS)
 	DEALER = init_dealer(NPLAYERS)
 	EXIT=[]
 	while len(PLAYERS)>1 and not True in EXIT:
-		play_hand(SMALL_BLIND, BIG_BLIND, PLAYERS, DEALER, EXIT)
+		print('\n\nHand %d\n' %(len(EXIT)+1))
+		play_hand(SMALL_BLIND, BIG_BLIND, PLAYERS, DEALER, TABLE, EXIT, game=GAME)
 		DEALER+=1
 		DEALER = DEALER%NPLAYERS
 
