@@ -10,14 +10,24 @@
 //================================================================================================="""
 
 from __future__ import print_function
-
+import random
+import numpy as np
 
 """
 basic_AI
-Place holder for AI routines.
+Place holder for AI routines. Totally random decision.
 """
-def basic_AI(hand, table, chips, minbet):
-	return max(10, minbet)
+def basic_AI(self_player, players, table):
+	minbet = np.amax(table.invals) - table.roundvals[self_player.order]
+	cointoss = random.randint(1, 3)
+	if cointoss==1:
+		return minbet+10
+	elif cointoss==2:
+		return minbet
+	elif minbet>0:
+		return 'f'
+	else:
+		return 0
 
 """
 player class:
@@ -41,7 +51,7 @@ class player:
 		#If show is True, will allow AIs, humans to see hand
 		self.show = False
 
-		#Round status
+		#Round status - betting for in and out of chips
 		self.betting = True
 		self.fold = False
 
@@ -57,6 +67,8 @@ class player:
 
 	def new_round(self, num):
 		self.order = num
+		self.betting = True
+		self.fold = False
 		self.hand = []
 
 	def show_hand(self):
@@ -75,16 +87,20 @@ class player:
 			self.betting = False
 			return True
 		else:
-			return False
-			
-			
+			return False			
 
 	def win(self, value):
 		self.bank += chips
 
-	def choose_bet(hand, table, chips, minbet):
+	def choose_bet(self, players, table):
 		if self.ai!=None:
-			return self.ai(hand, table, chips)
+			return self.ai(self, players, table)
 		else:
 			print('Bet error.')
 			sys.exit()
+
+	def hand_fold(self, show):
+		self.betting = False
+		self.fold = True
+		self.show  = show
+		

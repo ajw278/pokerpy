@@ -190,40 +190,74 @@ def get_bet(minimum, maximum,  players,plyrkey, table,mindiff = 5, blind=None):
 		elif bet=='f' or bet=='F':
 			break
 
+		try:
+			bet = int(bet)
+		except ValueError:
+			pass
+
 		if type(bet)!=int:
 			bet=minimum-10
 
 	return bet
 
 """
-blind_round
+make_bet
+In: player class object, table class object, bet value (f/F for fold hide/show)
+Out: None
+"""
+def make_bet(player, table, bet):
+	if type(bet)!=str:
+		bet_check = player.spend(bet)
+		if not bet_check:
+			print('Bet too high for player. Routine not implemented correctly yet.')
+			sys.exit()
+		
+		table.bid(bet, player.order)
+	else:
+		if bet=='f':
+			player.hand_fold(False)
+		elif bet=='F':
+			player.hand_fold(True)
+		else:
+			print('Bet signal "%s" not recognised.'%bet)
+			sys.exit()
 
+	return None
+
+"""
+blind_round
+NOTE: Not sure how to end betting, how many rounds should be allowed
 """
 def blind_round(players, sblind, bblind, table, game='texasNL'):
 	nplayers = len(players)
 	inplayers = nplayers
 	bet=0
 	current=0
-	temp_round_def = [0,1,2,3,4, 5, 6, 7, 8]
+	#Bodge job for ending rounds atm - just go around twice...
+	temp_round_def = np.arange(nplayers*2+1)
 	if 'texasNL' in game:
 		for iround in range(len(temp_round_def)): 
 			inplayers = 0
 			for plkey in players:
-				print(plkey)
 				if players[plkey].order==iround%nplayers and players[plkey].betting:
+					plind = players[plkey].order
+					if players[plkey].ai != None:
+						print('AI player.')
 					if iround==0:
 						print('%s bets small blind: %d' %(plkey, sblind))
-						players[plkey].spend(sblind)
 						new_bet=sblind
 					elif iround==1:
 						print('%s bets big blind: %d' %(plkey, bblind))
-						players[plkey].spend(bblind)
-						new_bet=sblind
+						new_bet=bblind
 					else:
-						print(players[plkey].ai)
 						if players[plkey].ai == None:
-							new_bet = get_bet(max(bblind, current), players[plkey].bank, players, plkey,table)
+							new_bet = get_bet(max(bblind, current)-table.roundvals[plind], players[plkey].bank, players, plkey,table)
+						else:
+							new_bet = players[plkey].choose_bet(players, table)
 
+					make_bet(players[plkey], table, new_bet)
+					print('%s bets : '%plkey, new_bet, ' for a total of ', table.roundvals[plind], 'this round.')
+				
 				if not players[plkey].fold:
 					inplayers+=1
 			if type(new_bet)==int:
@@ -243,17 +277,17 @@ Out: deck after flop/turn/river, poker table after flop
 """
 def flop(deck, table):
 	flop_cards, deck = deal(deck, 3, burn=True)
-	table.hand.deal(flop_cards)
+	table.deal(flop_cards)
 	return deck
 
 def turn(deck, table):
 	turn_cards, deck = deal(deck, 1, burn=True)
-	table.hand.deal(turn_cards)
+	table.deal(turn_cards)
 	return deck
 
 def river(deck, table):
 	river_cards, deck = deal(deck, 1, burn=True)
-	table.hand.deal(river_cards)
+	table.deal(river_cards)
 	return deck
 
 
@@ -267,7 +301,8 @@ def play_hand(sblind, bblind, players, dealer, table, exit, game='texasNL'):
 	HANDS, DECK = init_deal(DECK, NPLAYERS)
 	assign_hand(dealer, players, HANDS)
 	blind_round(players, sblind, bblind,  table, game=game)
-	
+	DECK = flop(DECK, table)
+	print('Table hand: ', table.hand)
 	#Added while testing before finished
 	exit.append(True)
 	return None

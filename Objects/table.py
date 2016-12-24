@@ -18,11 +18,17 @@ class poker_table
 class poker_table:
 	def __init__(self, nplayers):
 		self.hand = []
+		self.nplayers = nplayers
 		self.pot = 0
 		self.invals = np.zeros(nplayers, dtype=int)
+		self.roundvals = np.zeros(nplayers, dtype=int)
+
+	def new_round(self):
+		self.roundvals = np.zeros(self.nplayers, dtype=int)
 	
-	def bid(self,value, player_id):
-		self.invals[player_id] += value
+	def bid(self,value, player_order):
+		self.roundvals[player_order] += value
+		self.invals[player_order] += value
 		self.pot = int(np.sum(self.invals))
 
 	
@@ -42,5 +48,7 @@ class poker_table:
 			paybacks[ipay] = max(self.invals[ipay]-self.invals[winner_id],0)
 		self.pot = 0
 		self.hand=[]
+		self.invals = np.zeros(self.nplayers, dtype=int)
+		self.roundvals = np.zeros(self.nplayers, dtype=int)
 
 		return payout, paybacks
