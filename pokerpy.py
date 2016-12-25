@@ -166,10 +166,12 @@ def assign_hand(dealer, players, hands):
 	nplayers = len(players)
 	hands_all = range(len(hands))
 	for plyr_key in players:
+		oorder = players[plyr_key].order
+		players[plyr_key].new_round((oorder+dealer)%nplayers)
 		for hand_no in hands_all:
-			if players[plyr_key].order==(dealer+hand_no+1)%nplayers:
+			if players[plyr_key].order==(hand_no+1)%nplayers:
 				players[plyr_key].deal_cards(hands[hand_no])
-	
+
 	return None
 
 
@@ -178,7 +180,10 @@ get_bet
 Take betting decision from command line
 In: min bet, max bet, multiple of bet, players, key, table
 """
-def get_bet(minimum, maximum,  players,plyrkey, table,mindiff = 5, blind=None):
+def get_bet(players,plyrkey, table,mindiff = 5, blind=None):
+	minimum = np.amax(table.roundvals) - table.roundvals[players[plyrkey].order]
+	maximum = players[plyrkey].bank
+
 	bet = minimum-10
 	while bet<minimum or bet>maximum or bet%mindiff!=0:
 		print('("f" - fold, "F - fold and show hand,  "h" - see hand, "t" - show table hand)')
@@ -225,33 +230,40 @@ def make_bet(player, table, bet):
 	return None
 
 """
-blind_round
+round
 NOTE: Not sure how to end betting, how many rounds should be allowed
 """
-def blind_round(players, sblind, bblind, table, game='texasNL'):
+def std_round(players, table, blinds, blind_round=False, game='texasNL'):
+	sblind = min(blinds)
+	bblind = max(blinds)
 	nplayers = len(players)
 	inplayers = nplayers
+	table.new_round()
 	bet=0
+	new_bet=0
 	current=0
-	#Bodge job for ending rounds atm - just go around twice...
-	temp_round_def = np.arange(nplayers*2+1)
+	#Bodge job for ending rounds atm 
+	RoundFlag=True
+	iround =0
 	if 'texasNL' in game:
-		for iround in range(len(temp_round_def)): 
+		while RoundFlag: 
+			print('Bet number: ', iround)
 			inplayers = 0
 			for plkey in players:
 				if players[plkey].order==iround%nplayers and players[plkey].betting:
 					plind = players[plkey].order
 					if players[plkey].ai != None:
 						print('AI player.')
-					if iround==0:
-						print('%s bets small blind: %d' %(plkey, sblind))
-						new_bet=sblind
-					elif iround==1:
-						print('%s bets big blind: %d' %(plkey, bblind))
-						new_bet=bblind
-					else:
+					if blind_round:
+						if iround==0:
+							print('%s bets small blind: %d' %(plkey, sblind))
+							new_bet=sblind
+						elif iround==1:
+							print('%s bets big blind: %d' %(plkey, bblind))
+							new_bet=bblind
+					if (not blind_round) or (not (iround==1 or iround==0)):
 						if players[plkey].ai == None:
-							new_bet = get_bet(max(bblind, current)-table.roundvals[plind], players[plkey].bank, players, plkey,table)
+							new_bet = get_bet(players,plkey,table)
 						else:
 							new_bet = players[plkey].choose_bet(players, table)
 
@@ -259,15 +271,29 @@ def blind_round(players, sblind, bblind, table, game='texasNL'):
 					print('%s bets : '%plkey, new_bet, ' for a total of ', table.roundvals[plind], 'this round.')
 				
 				if not players[plkey].fold:
+					round_val = np.amax(table.roundvals)
 					inplayers+=1
-			if type(new_bet)==int:
-				current=max(current, new_bet)
+
+			iround +=1
+			if iround>nplayers:
+				RoundFlag=False
+				for plkey in players:
+					if players[plkey].betting and table.roundvals[players[plkey].order]!=round_val:
+						RoundFlag=True
+						
 			
 			bet=new_bet
+			new_bet='error'
 			#Define here current min bet size
-			#Also define here number of people still in
+			print('Players remaining in this hand: ', inplayers)
+	else:
+		print('Game mode "%s" not implemented yet.' %game)
 
 	return None
+
+
+
+
 
 """
 flop/turn/river
@@ -300,10 +326,19 @@ def play_hand(sblind, bblind, players, dealer, table, exit, game='texasNL'):
 	NPLAYERS = len(players)
 	HANDS, DECK = init_deal(DECK, NPLAYERS)
 	assign_hand(dealer, players, HANDS)
-	blind_round(players, sblind, bblind,  table, game=game)
+	std_round(players,  table, [sblind, bblind], blind_round=True, game=game)
 	DECK = flop(DECK, table)
-	print('Table hand: ', table.hand)
-	#Added while testing before finished
+	print('Flop: ', table.hand)
+	std_round(players,  table, [0, 0], blind_round=False, game=game)
+	DECK = turn(DECK, table)
+	print('Turn: ', table.hand)
+	std_round(players,  table, [0, 0], blind_round=False, game=game)
+	DECK = river(DECK, table)
+	print('River: ', table.hand)
+	std_round(players,  table, [0, 0], blind_round=False, game=game)
+
+
+	#Added while testing before finished (playing one hand)
 	exit.append(True)
 	return None
 """

@@ -18,7 +18,7 @@ basic_AI
 Place holder for AI routines. Totally random decision.
 """
 def basic_AI(self_player, players, table):
-	minbet = np.amax(table.invals) - table.roundvals[self_player.order]
+	minbet = np.amax(table.roundvals) - table.roundvals[self_player.order]
 	cointoss = random.randint(1, 3)
 	if cointoss==1:
 		return minbet+10
