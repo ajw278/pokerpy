@@ -23,13 +23,15 @@ import hand
 import player
 import table
 import numpy as np
+import itertools
 
 
 """
 LIST OF RULES TO ADD:
-Head-to-head: small blind==dealer, big blind is the other --> change in order
+Head-to-head: small blind is the dealer, big blind is the other --> change in order
 Game types: Texas Hold'em (No Limit, Limit, Pot Limit): texas(NL/L/PL), other types
-
+Kinds: Include kind types at end?
+Draw: Include routine if the same hand
 """
 
 """
@@ -213,8 +215,17 @@ Out: None
 def make_bet(player, table, bet):
 	if type(bet)!=str:
 		bet_check = player.spend(bet)
-		if not bet_check:
-			print('Bet too high for player. Routine not implemented correctly yet.')
+		err_flag = False
+		i_flag=0
+		while not bet_check and not err_flag:
+			print('Bet too high for player. Betting all in...')
+			bet_check = player.spend(player.bank)
+			i_flag+=1
+			if i_flag>2:
+				err_flag=True
+			
+		if err_flag:
+			print('Error in betting.')
 			sys.exit()
 		
 		table.bid(bet, player.order)
@@ -244,6 +255,7 @@ def std_round(players, table, blinds, blind_round=False, game='texasNL'):
 	current=0
 	#Bodge job for ending rounds atm 
 	RoundFlag=True
+	RoundRecord = []
 	iround =0
 	if 'texasNL' in game:
 		while RoundFlag: 
@@ -266,10 +278,12 @@ def std_round(players, table, blinds, blind_round=False, game='texasNL'):
 							new_bet = get_bet(players,plkey,table)
 						else:
 							new_bet = players[plkey].choose_bet(players, table)
-
+					if new_bet>np.amax(table.roundvals):
+						RoundRecord.append(players[plkey].ID)
 					make_bet(players[plkey], table, new_bet)
 					print('%s bets : '%plkey, new_bet, ' for a total of ', table.roundvals[plind], 'this round.')
-				
+				#the last player to take aggressive action by a bet or raise is the first to show the hand
+				#hence we need a record of who has raised last in each round
 				if not players[plkey].fold:
 					round_val = np.amax(table.roundvals)
 					inplayers+=1
@@ -289,9 +303,59 @@ def std_round(players, table, blinds, blind_round=False, game='texasNL'):
 	else:
 		print('Game mode "%s" not implemented yet.' %game)
 
+	return RoundRecord
+
+"""
+showdown
+Convoluted and unecessarily complicated right now... need to check all this
+In: Players, table, betting order (not used atm, for the reveal if needed)
+
+"""
+def showdown(players, table, betorder):
+	print(betorder)
+	playing_hands_name={}
+	playing_hands = {}
+	playing_values = {}
+	max_hand_val =0
+	for plkey in players:
+		if not players[plkey].fold:
+			tot_hand = players[plkey].hand + table.hand
+			all_hands = list(itertools.combinations(tot_hand,5))
+			all_values = np.zeros(len(all_hands))
+			for ihand in range(len(all_hands)):
+				all_values[ihand] = hand.hand_value(all_hands[ihand])
+				
+			maxind = np.argmax(all_values)
+			playing_hands[plkey] = all_hands[maxind]
+			playing_hands_name[plkey] = hand.poker_hand(all_hands[maxind])
+			playing_values[plkey] = hand.hand_value(all_hands[maxind])
+			
+	for plkey in playing_hands:
+		max_hand_val = max(max_hand_val, playing_values[plkey])
+
+	win_inds = []
+
+	for plkey in playing_hands:
+		if playing_values[plkey]==max_hand_val:
+			win_inds.append(players[plkey].order)
+
+	
+	payouts = table.payout(win_inds)
+	
+	for ipay in range(len(payouts)):
+		for plkey in players:
+			if players[plkey].order==ipay:
+				players[plkey].win(payouts[ipay])
+				print('\nWinnings for %s: %d'%(plkey, payouts[ipay]))
+				print('Hand: ', players[plkey].hand)
+				print('Table hand: ', table.hand)
+				if plkey in playing_hands:
+					print('Best type: ', playing_hands_name[plkey])
+					print('Best hand: ', playing_hands[plkey])
+			
+
+	print(playing_hands)
 	return None
-
-
 
 
 
@@ -321,25 +385,37 @@ def river(deck, table):
 play_hand
 In: small blind, big blind, player dictionary, dealer index, exit signal
 """
-def play_hand(sblind, bblind, players, dealer, table, exit, game='texasNL'):
+def play_hand(sblind, bblind, players, outplayers, dealer, table, exit, game='texasNL'):
+	table.new_hand()
 	DECK = init_deck()
 	NPLAYERS = len(players)
 	HANDS, DECK = init_deal(DECK, NPLAYERS)
 	assign_hand(dealer, players, HANDS)
-	std_round(players,  table, [sblind, bblind], blind_round=True, game=game)
+	RoundOrder = std_round(players,  table, [sblind, bblind], blind_round=True, game=game)
 	DECK = flop(DECK, table)
 	print('Flop: ', table.hand)
-	std_round(players,  table, [0, 0], blind_round=False, game=game)
+	RoundOrder += std_round(players,  table, [0, 0], blind_round=False, game=game)
 	DECK = turn(DECK, table)
 	print('Turn: ', table.hand)
-	std_round(players,  table, [0, 0], blind_round=False, game=game)
+	RoundOrder += std_round(players,  table, [0, 0], blind_round=False, game=game)
 	DECK = river(DECK, table)
 	print('River: ', table.hand)
-	std_round(players,  table, [0, 0], blind_round=False, game=game)
+	RoundOrder += std_round(players,  table, [0, 0], blind_round=False, game=game)
+	showdown(players, table, RoundOrder)
 
+	print('End of round situation:')
+	del_players= []
+	for plkey in players:
+		print(plkey, players[plkey].bank)
+		if players[plkey].bank ==0:
+			outplayers[plkey] = players[plkey]
+			del_players.append(plkey)
 
+	for delkey in del_players:
+		players.pop(delkey, None)
+	
 	#Added while testing before finished (playing one hand)
-	exit.append(True)
+	#exit.append(True)
 	return None
 """
 main
@@ -351,13 +427,14 @@ def main():
 	print("Loading defaults...")
 	NHUMAN, NAI, VALUES, KINDS, SMALL_BLIND, BIG_BLIND, CHIPS0,GAME = read_defaults()
 	PLAYERS = get_players(NHUMAN, NAI, CHIPS0)
+	OUTPLAYERS={}
 	NPLAYERS = NHUMAN + NAI
 	TABLE = table.poker_table(NPLAYERS)
 	DEALER = init_dealer(NPLAYERS)
 	EXIT=[]
 	while len(PLAYERS)>1 and not True in EXIT:
 		print('\n\nHand %d\n' %(len(EXIT)+1))
-		play_hand(SMALL_BLIND, BIG_BLIND, PLAYERS, DEALER, TABLE, EXIT, game=GAME)
+		play_hand(SMALL_BLIND, BIG_BLIND, PLAYERS, OUTPLAYERS, DEALER, TABLE, EXIT, game=GAME)
 		DEALER+=1
 		DEALER = DEALER%NPLAYERS
 

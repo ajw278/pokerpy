@@ -90,7 +90,7 @@ class player:
 			return False			
 
 	def win(self, value):
-		self.bank += chips
+		self.bank += value
 
 	def choose_bet(self, players, table):
 		if self.ai!=None:

@@ -139,10 +139,33 @@ poker_value:
 In: Hand definition as 'card', list of functions defining hands from greatest to worst hand
 Out: Highest hand value
 """
-def poker_value(hand, possible_scores=[is_straight_flush, is_four_of_a_kind, is_full_house,
+def poker_hand(hand, possible_scores=[is_straight_flush, is_four_of_a_kind, is_full_house,
                         is_flush, is_straight, is_three_of_a_kind, is_two_pair, is_pair, is_nothing]):
 	
 	return first_true(hand, possible_scores).__name__[3:]
+
+
+"""
+hand_value
+Perhaps dodgy way to assign value to card hand
+In: Hand
+Out: value assigned to each hand - use suit vals??
+"""
+def hand_value(hand, suit_vals=False):
+	hand_dict = {'nothing': 0, 'pair': 1000, 'two_pair':2000, 'three_of_a_kind': 3000,  \
+	'straight':4000, 'flush': 5000, 'full_house': 6000, 'four_of_a_kind':7000, 'straight_flush':8000}
+
+	
+	value=0
+	value += hand_dict[poker_hand(hand)]
+	
+	for card in hand:
+		value += int(10*card.value)
+		if suit_vals:
+			value += int(card.kind)
+	
+	
+	return value
 
 """
 poker_deck:
