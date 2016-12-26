@@ -169,12 +169,39 @@ Out: player dictionary with hands assigned
 def assign_hand(dealer, players, hands):
 	nplayers = len(players)
 	hands_all = range(len(hands))
+	IDs = []
 	for plyr_key in players:
-		oorder = players[plyr_key].order
-		players[plyr_key].new_round((oorder+dealer)%nplayers)
-		for hand_no in hands_all:
-			if players[plyr_key].order==hand_no%nplayers:
-				players[plyr_key].deal_cards(hands[hand_no])
+		IDs.append(players[plyr_key].ID)
+	
+	IDs = sorted(IDs)
+
+	iID=0
+	for ID in IDs:
+		for plyr_key in players:
+			if players[plyr_key].ID==ID:
+				oorder = iID
+				players[plyr_key].new_round((oorder+dealer)%nplayers)
+				for hand_no in hands_all:
+					if players[plyr_key].order==hand_no%nplayers:
+						players[plyr_key].deal_cards(hands[hand_no])
+	
+		
+		iID+=1
+
+	
+	#Check that deal is correct
+	all_hands = []
+	print('PLAYERS', players)
+	for plkey in players:
+		print(players[plkey].order)
+		if players[plkey].hand in all_hands:
+			print('Repeated hand error.')
+			print(hands)
+			for plkey2 in players:
+				print(plkey2, players[plkey2].order, players[plkey2].hand)
+			sys.exit()
+		all_hands.append(players[plkey].hand)
+
 
 	return None
 
@@ -376,7 +403,8 @@ def make_bet(player, table, bet):
 		i_flag=0
 		while not bet_check and not err_flag:
 			print('Bet too high for player. Betting all in...')
-			bet_check = player.spend(player.bank)
+			bet = player.bank
+			bet_check = player.spend(bet)
 			i_flag+=1
 			if i_flag>2:
 				err_flag=True
@@ -395,7 +423,7 @@ def make_bet(player, table, bet):
 			print('Bet signal "%s" not recognised.'%bet)
 			sys.exit()
 
-	return None
+	return bet
 
 """
 round
@@ -406,6 +434,7 @@ def std_round(players, table, blinds, blind_round=False, game='texasNL'):
 	bblind = max(blinds)
 	nplayers = len(players)
 	inplayers = nplayers
+	betplayers=nplayers
 	table.new_round()
 	bet=0
 	new_bet=0
@@ -415,9 +444,10 @@ def std_round(players, table, blinds, blind_round=False, game='texasNL'):
 	RoundRecord = []
 	iround =0
 	if 'texasNL' in game:
-		while RoundFlag: 
+		while RoundFlag and inplayers>1 and betplayers>1: 
 			print('Bet number: ', iround)
 			inplayers = 0
+			betplayers=0
 			for plkey in players:
 				if players[plkey].order==iround%nplayers and players[plkey].betting:
 					plind = players[plkey].order
@@ -444,6 +474,8 @@ def std_round(players, table, blinds, blind_round=False, game='texasNL'):
 				if not players[plkey].fold:
 					round_val = np.amax(table.roundvals)
 					inplayers+=1
+				if players[plkey].betting:
+					betplayers+=1
 
 			iround +=1
 			if iround>nplayers:
@@ -484,7 +516,7 @@ def showdown(players, table, betorder, deck, gtype='std'):
 			all_values = np.zeros(len(all_hands))
 			for ihand in range(len(all_hands)):
 				all_values[ihand] = hand.hand_value(all_hands[ihand])
-				
+			
 			maxind = np.argmax(all_values)
 			playing_hands[plkey] = all_hands[maxind]
 			playing_hands_name[plkey] = hand.poker_hand(all_hands[maxind])
@@ -512,8 +544,7 @@ def showdown(players, table, betorder, deck, gtype='std'):
 				if plkey in playing_hands:
 					print('Best type: ', playing_hands_name[plkey])
 					print('Best hand: ', playing_hands[plkey])
-			
-
+	
 	print(playing_hands)
 	return None
 

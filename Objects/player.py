@@ -29,6 +29,10 @@ def basic_AI(self_player, players, table):
 	else:
 		return 0
 
+def fix_min(self_player, players, table):
+	minbet = np.amax(table.roundvals) - table.roundvals[self_player.order]
+	return minbet
+
 """
 player class:
 This is the generic class for all players, human or AI
@@ -63,7 +67,7 @@ class player:
 		if AI_type == None:
 			self.ai = None
 		elif AI_type == 'basic':
-			self.ai = basic_AI
+			self.ai = fix_min
 
 	def new_round(self, num):
 		self.order = num

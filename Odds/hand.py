@@ -173,29 +173,25 @@ def hand_value(hand, suit_vals=False):
 			if c_values.count(val)==mcommon_count:
 				highest_mcommon = val
 
-		c_values = filter(lambda a: a != val, c_values)
-
-		valarray[ival] = val
+		c_values = filter(lambda a: a != highest_mcommon, c_values)
+		valarray[ival] = highest_mcommon
 		ival+=1
-		
+
 	value=0.0
 	subtract = 0
 	for ival in valarray:
 		value += ival*(VALUES+1)**(len(hand)-subtract)
-		subtract+=1
-	
-	
+		subtract+=1	
 	
 	if suit_vals:
 		print('Not set up for suit evaulation. Easy fix.')
 		sys.exit()
 	
-	
 	return value
 
 """
 poker_deck:
-In: maximum value, number of suits
+In: number of values, number of suits
 Out: list containing type 'card' named tuple for each element of deck
 """
 def poker_deck(max_value=VALUES, number_of_kinds=KINDS):

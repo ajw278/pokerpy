@@ -62,6 +62,5 @@ class poker_table:
 		for ipay in range(len(payouts_in)):
 			payouts[ipay] = self.invals[ipay]- payouts_out[ipay]+payouts_in[ipay]
 			
-			
 		return payouts
 
