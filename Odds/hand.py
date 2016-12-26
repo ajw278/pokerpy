@@ -17,6 +17,7 @@ from __future__ import print_function
 from __future__ import division
 from collections import namedtuple, Counter
 import random
+import numpy as np
 
 CARDS_PER_HAND = 5
 VALUES = 13
@@ -148,29 +149,46 @@ def poker_hand(hand, possible_scores=[is_straight_flush, is_four_of_a_kind, is_f
 """
 hand_value
 Perhaps dodgy way to assign value to card hand
+Bodged for now.
 In: Hand
 Out: value assigned to each hand - use suit vals??
 """
 def hand_value(hand, suit_vals=False):
-	hand_dict = {'nothing': 0, 'pair': 100000, 'two_pair':200000, 'three_of_a_kind': 300000,  \
-	'straight':400000, 'flush': 500000, 'full_house': 600000, 'four_of_a_kind':700000, 'straight_flush':800000}
+	hand_dict = {'nothing': 0, 'pair': 1, 'two_pair':2, 'three_of_a_kind': 3,  \
+	'straight':4, 'flush': 5, 'full_house': 6, 'four_of_a_kind':7, 'straight_flush':8}
 
+	valarray = np.zeros(len(hand)+1, dtype=int)
 	
-	value=0
 	hand_name = poker_hand(hand)
-	value += hand_dict[hand_name]
+	valarray[0] =  hand_dict[hand_name]
 	
 	c_values = values(hand)
+	ival = 1
+	while (ival<len(valarray)-1) and len(c_values)>=1:
+		mcommon_value = most_common(c_values)
+		mcommon_count = c_values.count(mcommon_value)
+		highest_mcommon=0
+		val = 0
+		for val in range(VALUES):
+			if c_values.count(val)==mcommon_count:
+				highest_mcommon = val
 
+		c_values = filter(lambda a: a != val, c_values)
 
-	for card in hand:
+		valarray[ival] = val
+		ival+=1
 		
-		value += int(10*card.value)
+	value=0.0
+	subtract = 0
+	for ival in valarray:
+		value += ival*(VALUES+1)**(len(hand)-subtract)
+		subtract+=1
+	
 	
 	
 	if suit_vals:
-		for card in hand:
-			value += int(card.kind)
+		print('Not set up for suit evaulation. Easy fix.')
+		sys.exit()
 	
 	
 	return value
