@@ -1,9 +1,18 @@
+#number human players
 NHUMAN = 0
+#number of computer players
 NAI = 4
+#number of suits
 KINDS = 4
+#number of values
 VALUES = 13
+#number of starting chips
 CHIPS0 = 200
+#size of small blind
 SMALL_BLIND = 10
+#size of big blind
 BIG_BLIND = 20
+#poker variant - 'texasNL' 
 GAME = texasNL
+#mode - 'std', 'manual'
 TYPE = std
