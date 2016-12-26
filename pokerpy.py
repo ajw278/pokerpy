@@ -66,12 +66,14 @@ def read_defaults(defaults='defaults.dat'):
 				CHIPS0 = int(re.findall(r"[-+]?\d*\.\d+|\d+", line.split('=')[1])[0])
 			elif 'GAME' in line:
 				GAME = str(line.split('=')[1]).strip()
+			elif 'TYPE' in line:
+				TYPE = str(line.split('=')[1]).strip()
 		except ValueError:
 			print('Error reading defaults.')
 			sys.exit()
 
 	try:
-		return NHUMAN, NAI, VALUES, KINDS, SMALL_BLIND, BIG_BLIND, CHIPS0, GAME
+		return NHUMAN, NAI, VALUES, KINDS, SMALL_BLIND, BIG_BLIND, CHIPS0, GAME, TYPE
 	except ValueError:
 		print('Not all variables defined in defaults file.')
 		sys.exit()
@@ -171,7 +173,7 @@ def assign_hand(dealer, players, hands):
 		oorder = players[plyr_key].order
 		players[plyr_key].new_round((oorder+dealer)%nplayers)
 		for hand_no in hands_all:
-			if players[plyr_key].order==(hand_no+1)%nplayers:
+			if players[plyr_key].order==hand_no%nplayers:
 				players[plyr_key].deal_cards(hands[hand_no])
 
 	return None
@@ -206,6 +208,161 @@ def get_bet(players,plyrkey, table,mindiff = 5, blind=None):
 			bet=minimum-10
 
 	return bet
+
+"""
+get_init_deal
+Take initial deal information from command line
+In: deck, players
+Out: deck after deal
+"""
+def get_init_deal(deck, players, ncards_tot=2):	
+	yes = ['y', 'Y', 'yes', 'Yes']
+	no = ['n', 'N', 'no', 'No']
+
+	for plkey in players:
+		hand_size = 0
+		hand_incomplete=True
+		while hand_incomplete:
+			hand1 = 'na'
+			hand2 = 'na'
+			y_n_ans = 'na'
+			while not hand1 in range(13) and not hand1=='u' :
+				hand1 = raw_input('%s card %d value (0-12, "u" for unknown): '%(plkey, hand_size+1))
+				try:
+					hand1 = int(hand1)
+				except ValueError:
+					pass
+			while not hand2 in range(4) and not hand2=='u' :
+				hand2 = raw_input('%s card %d kind (0-3, "u" for unknown): '%(plkey, hand_size+1))
+				try:
+					hand2 = int(hand2)
+				except ValueError:
+					pass
+			if (hand1=='u' or hand2=='u') and (hand1!='u' or hand2!='u'):
+				while not y_n_ans in yes and not y_n_ans in no:
+					y_n_ans = ('You have half the hand defined, half unknown. Are you sure?')
+
+				if y_n_ans in yes:
+					hand_incomplete=False
+					print('This feature not implemented yet.')
+					sys.exit()
+			elif hand1=='u' and hand2=='u' and players[plkey].ai!=None:
+				while not y_n_ans in yes and not y_n_ans in no:
+					y_n_ans = ('Undefined hand for AI. Are you sure?')
+				
+				
+				if y_n_ans in yes:
+					hand_incomplete=False
+					print('This feature not implemented yet.')
+					sys.exit()
+			elif hand1=='u' and hand2=='u':
+				hand_size+=1
+			else:
+				del_cards = []
+				icard = 0
+				for card in deck:
+					if card.value==hand1 and card.kind==hand2:
+						players[plkey].deal_cards([card])
+						del_cards.append(icard)
+					icard+=1
+
+				if len(del_cards)<1:
+					print('No card with value %d and kind %d found in the deck.'%(hand1, hand2))
+				elif len(del_cards)>1:
+					print('Deck error: found multiple value %d and kind %d in deck.'%(hand1, hand2))
+				else:
+					print('Dealt to %s: '%plkey, deck[del_cards[0]])
+					hand_size+=1
+					del deck[del_cards[0]]
+						
+
+			if hand_size==ncards_tot:
+				hand_incomplete=False
+				
+	
+	return deck
+
+def get_final_hands(deck, players, ncards_tot=2):
+	for plkey in players:
+		if len(players[plkey].hand)<ncards_tot:
+			deck = get_init_deal(deck, {plkey: players[plkey]}, \
+			ncards_tot=ncards_tot-len(players[plkey].hand))
+
+	return deck
+
+
+"""
+get_bet
+Take betting decision from command line
+In: min bet, max bet, multiple of bet, players, key, table
+"""
+def get_table(deck, table, ncards_tot):	
+	yes = ['y', 'Y', 'yes', 'Yes']
+	no = ['n', 'N', 'no', 'No']
+	ncards=0
+	table_incomplete=True
+	print('Deal %d cards to table: '%ncards_tot)
+	while table_incomplete:
+		table1 = 'na'
+		table2 = 'na'
+		y_n_ans = 'na'
+		while not table1 in range(13):
+			table1 = raw_input('Table card %d value (0-12, "u" for unknown): '%(ncards+1))
+			try:
+				table1 = int(table1)
+			except ValueError:
+				pass
+		while not table2 in range(4):
+			table2 = raw_input('Table card %d kind (0-3, "u" for unknown): '%(ncards+1))
+			try:
+				table2 = int(table2)
+			except ValueError:
+				pass
+		
+		del_cards = []
+		icard = 0
+		for card in deck:
+			if card.value==table1 and card.kind==table2:
+				table.deal([card])
+				del_cards.append(icard)
+			icard+=1
+
+		if len(del_cards)<1:
+			print('No card with value %d and kind %d found in the deck.'%(table1, table2))
+		elif len(del_cards)>1:
+			print('Deck error: found multiple value %d and kind %d in deck.'%(table1, table2))
+			sys.exit()
+		else:
+			print('Dealt: ', deck[del_cards[0]])
+			ncards+=1
+			del deck[del_cards[0]]
+					
+
+		if ncards==ncards_tot:
+			table_incomplete=False
+				
+	
+	return deck
+
+"""
+get_dealer
+In: nplayers
+Out: dealer
+"""
+def get_dealer(nplayers):
+	dealer=nplayers+1
+	while dealer<0 or dealer>nplayers-1:
+		dealer = raw_input('Initial dealer index (of %d players): ' %(nplayers))
+		
+		try:
+			dealer = int(dealer)
+		except ValueError:
+			pass
+
+		if type(dealer)!=int:
+			bet=minimum-10
+
+	return dealer
 
 """
 make_bet
@@ -311,7 +468,10 @@ Convoluted and unecessarily complicated right now... need to check all this
 In: Players, table, betting order (not used atm, for the reveal if needed)
 
 """
-def showdown(players, table, betorder):
+def showdown(players, table, betorder, deck, gtype='std'):
+	if gtype=='manual':
+		get_final_hands(deck, players)
+	
 	print(betorder)
 	playing_hands_name={}
 	playing_hands = {}
@@ -385,23 +545,39 @@ def river(deck, table):
 play_hand
 In: small blind, big blind, player dictionary, dealer index, exit signal
 """
-def play_hand(sblind, bblind, players, outplayers, dealer, table, exit, game='texasNL'):
+def play_hand(sblind, bblind, players, outplayers, dealer, table, exit, game='texasNL', gtype='std'):
 	table.new_hand()
 	DECK = init_deck()
 	NPLAYERS = len(players)
-	HANDS, DECK = init_deal(DECK, NPLAYERS)
-	assign_hand(dealer, players, HANDS)
+	
+	if gtype=='std':
+		HANDS, DECK = init_deal(DECK, NPLAYERS)
+		assign_hand(dealer, players, HANDS)
+	elif gtype=='manual':
+		DECK = get_init_deal(DECK, players)
+	else:
+		print('Game type not recognised.')
+		
 	RoundOrder = std_round(players,  table, [sblind, bblind], blind_round=True, game=game)
-	DECK = flop(DECK, table)
+	if gtype=='std':
+		DECK = flop(DECK, table)
+	elif gtype=='manual':
+		DECK = get_table(DECK, table, 3)
 	print('Flop: ', table.hand)
 	RoundOrder += std_round(players,  table, [0, 0], blind_round=False, game=game)
-	DECK = turn(DECK, table)
+	if gtype=='std':
+		DECK = turn(DECK, table)
+	elif gtype=='manual':
+		DECK = get_table(DECK, table, 1)
 	print('Turn: ', table.hand)
 	RoundOrder += std_round(players,  table, [0, 0], blind_round=False, game=game)
-	DECK = river(DECK, table)
+	if gtype=='std':
+		DECK = river(DECK, table)
+	elif gtype=='manual':
+		DECK = get_table(DECK, table, 1)
 	print('River: ', table.hand)
 	RoundOrder += std_round(players,  table, [0, 0], blind_round=False, game=game)
-	showdown(players, table, RoundOrder)
+	showdown(players, table, RoundOrder, DECK, gtype=gtype)
 
 	print('End of round situation:')
 	del_players= []
@@ -425,16 +601,26 @@ def main():
 	print("****************POKERPY*****************")
 	print("****************************************")
 	print("Loading defaults...")
-	NHUMAN, NAI, VALUES, KINDS, SMALL_BLIND, BIG_BLIND, CHIPS0,GAME = read_defaults()
+	NHUMAN, NAI, VALUES, KINDS, SMALL_BLIND, BIG_BLIND, CHIPS0,GAME, TYPE = read_defaults()
 	PLAYERS = get_players(NHUMAN, NAI, CHIPS0)
 	OUTPLAYERS={}
 	NPLAYERS = NHUMAN + NAI
 	TABLE = table.poker_table(NPLAYERS)
-	DEALER = init_dealer(NPLAYERS)
+	if TYPE=='std':
+		DEALER = init_dealer(NPLAYERS)
+	elif TYPE=='manual':
+		DEALER = get_dealer(NPLAYERS)
+	else:
+		print('Game type not recognised.')
+		print(TYPE, 'manual', TYPE=='manual')
+		for it in range(len(TYPE)):
+			print(TYPE[it], 'manual'[it])
+		sys.exit()
 	EXIT=[]
 	while len(PLAYERS)>1 and not True in EXIT:
 		print('\n\nHand %d\n' %(len(EXIT)+1))
-		play_hand(SMALL_BLIND, BIG_BLIND, PLAYERS, OUTPLAYERS, DEALER, TABLE, EXIT, game=GAME)
+		print('Dealer: ', DEALER)
+		play_hand(SMALL_BLIND, BIG_BLIND, PLAYERS, OUTPLAYERS, DEALER, TABLE, EXIT, game=GAME, gtype=TYPE)
 		DEALER+=1
 		DEALER = DEALER%NPLAYERS
 

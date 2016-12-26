@@ -152,16 +152,24 @@ In: Hand
 Out: value assigned to each hand - use suit vals??
 """
 def hand_value(hand, suit_vals=False):
-	hand_dict = {'nothing': 0, 'pair': 1000, 'two_pair':2000, 'three_of_a_kind': 3000,  \
-	'straight':4000, 'flush': 5000, 'full_house': 6000, 'four_of_a_kind':7000, 'straight_flush':8000}
+	hand_dict = {'nothing': 0, 'pair': 100000, 'two_pair':200000, 'three_of_a_kind': 300000,  \
+	'straight':400000, 'flush': 500000, 'full_house': 600000, 'four_of_a_kind':700000, 'straight_flush':800000}
 
 	
 	value=0
-	value += hand_dict[poker_hand(hand)]
+	hand_name = poker_hand(hand)
+	value += hand_dict[hand_name]
 	
+	c_values = values(hand)
+
+
 	for card in hand:
+		
 		value += int(10*card.value)
-		if suit_vals:
+	
+	
+	if suit_vals:
+		for card in hand:
 			value += int(card.kind)
 	
 	
