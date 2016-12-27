@@ -217,6 +217,7 @@ def get_bet(players,plyrkey, table,mindiff = 5, blind=None):
 
 	bet = minimum-10
 	while bet<minimum or bet>maximum or bet%mindiff!=0:
+		print('Bet for %s'%plyrkey)
 		print('("f" - fold, "F - fold and show hand,  "h" - see hand, "t" - show table hand)')
 		bet = raw_input('Bet (in multiples %s) between %d and %d: ' %(mindiff, minimum, maximum))
 		if bet=='h':
@@ -242,78 +243,95 @@ Take initial deal information from command line
 In: deck, players
 Out: deck after deal
 """
-def get_init_deal(deck, players, ncards_tot=2):	
+def get_init_deal(deck, players, dealer, ncards_tot=2):	
 	yes = ['y', 'Y', 'yes', 'Yes']
 	no = ['n', 'N', 'no', 'No']
 
-	for plkey in players:
+	nplayers = len(players)
+	IDs = []
+	for plyr_key in players:
+		IDs.append(players[plyr_key].ID)
+	
+	IDs = sorted(IDs)
+
+	iID=0
+	for ID in IDs:
+		for plyr_key in players:
+			if players[plyr_key].ID==ID:
+				oorder = iID
+				players[plyr_key].new_round((oorder+dealer)%nplayers)
+				iID+=1
+
+	for ID in IDs:
 		hand_size = 0
 		hand_incomplete=True
-		while hand_incomplete:
-			hand1 = 'na'
-			hand2 = 'na'
-			y_n_ans = 'na'
-			while not hand1 in range(13) and not hand1=='u' :
-				hand1 = raw_input('%s card %d value (0-12, "u" for unknown): '%(plkey, hand_size+1))
-				try:
-					hand1 = int(hand1)
-				except ValueError:
-					pass
-			while not hand2 in range(4) and not hand2=='u' :
-				hand2 = raw_input('%s card %d kind (0-3, "u" for unknown): '%(plkey, hand_size+1))
-				try:
-					hand2 = int(hand2)
-				except ValueError:
-					pass
-			if (hand1=='u' or hand2=='u') and (hand1!='u' or hand2!='u'):
-				while not y_n_ans in yes and not y_n_ans in no:
-					y_n_ans = ('You have half the hand defined, half unknown. Are you sure?')
+		for plkey in players:
+			if players[plkey].ID==ID:
+				while hand_incomplete:
+					hand1 = 'na'
+					hand2 = 'na'
+					y_n_ans = 'na'
+					while not hand1 in range(13) and not hand1=='u' :
+						hand1 = raw_input('%s card %d value (0-12, "u" for unknown): '%(plkey, hand_size+1))
+						try:
+							hand1 = int(hand1)
+						except ValueError:
+							pass
+					while not hand2 in range(4) and not hand2=='u' :
+						hand2 = raw_input('%s card %d kind (0-3, "u" for unknown): '%(plkey, hand_size+1))
+						try:
+							hand2 = int(hand2)
+						except ValueError:
+							pass
+					if (hand1=='u' or hand2=='u') and (hand1!='u' or hand2!='u'):
+						while not y_n_ans in yes and not y_n_ans in no:
+							y_n_ans = ('You have half the hand defined, half unknown. Are you sure?')
 
-				if y_n_ans in yes:
-					hand_incomplete=False
-					print('This feature not implemented yet.')
-					sys.exit()
-			elif hand1=='u' and hand2=='u' and players[plkey].ai!=None:
-				while not y_n_ans in yes and not y_n_ans in no:
-					y_n_ans = ('Undefined hand for AI. Are you sure?')
+						if y_n_ans in yes:
+							hand_incomplete=False
+							print('This feature not implemented yet.')
+							sys.exit()
+					elif hand1=='u' and hand2=='u' and players[plkey].ai!=None:
+						while not y_n_ans in yes and not y_n_ans in no:
+							y_n_ans = ('Undefined hand for AI. Are you sure?')
 				
 				
-				if y_n_ans in yes:
-					hand_incomplete=False
-					print('This feature not implemented yet.')
-					sys.exit()
-			elif hand1=='u' and hand2=='u':
-				hand_size+=1
-			else:
-				del_cards = []
-				icard = 0
-				for card in deck:
-					if card.value==hand1 and card.kind==hand2:
-						players[plkey].deal_cards([card])
-						del_cards.append(icard)
-					icard+=1
+						if y_n_ans in yes:
+							hand_incomplete=False
+							print('This feature not implemented yet.')
+							sys.exit()
+					elif hand1=='u' and hand2=='u':
+						hand_size+=1
+					else:
+						del_cards = []
+						icard = 0
+						for card in deck:
+							if card.value==hand1 and card.kind==hand2:
+								players[plkey].deal_cards([card])
+								del_cards.append(icard)
+							icard+=1
 
-				if len(del_cards)<1:
-					print('No card with value %d and kind %d found in the deck.'%(hand1, hand2))
-				elif len(del_cards)>1:
-					print('Deck error: found multiple value %d and kind %d in deck.'%(hand1, hand2))
-				else:
-					print('Dealt to %s: '%plkey, deck[del_cards[0]])
-					hand_size+=1
-					del deck[del_cards[0]]
+						if len(del_cards)<1:
+							print('No card with value %d and kind %d found in the deck.'%(hand1, hand2))
+						elif len(del_cards)>1:
+							print('Deck error: found multiple value %d and kind %d in deck.'%(hand1, hand2))
+						else:
+							print('Dealt to %s: '%plkey, deck[del_cards[0]])
+							hand_size+=1
+							del deck[del_cards[0]]
 						
 
-			if hand_size==ncards_tot:
-				hand_incomplete=False
+					if hand_size==ncards_tot:
+						hand_incomplete=False
 				
 	
 	return deck
 
-def get_final_hands(deck, players, ncards_tot=2):
+def get_final_hands(deck, players, dealer,  ncards_tot=2):
 	for plkey in players:
 		if len(players[plkey].hand)<ncards_tot:
 			deck = get_init_deal(deck, {plkey: players[plkey]}, \
-			ncards_tot=ncards_tot-len(players[plkey].hand))
+			dealer, ncards_tot=ncards_tot-len(players[plkey].hand))
 
 	return deck
 
@@ -434,7 +452,7 @@ def std_round(players, table, blinds, blind_round=False, game='texasNL'):
 	bblind = max(blinds)
 	nplayers = len(players)
 	inplayers = nplayers
-	betplayers=nplayers
+	betplayers=0
 	table.new_round()
 	bet=0
 	new_bet=0
@@ -443,46 +461,56 @@ def std_round(players, table, blinds, blind_round=False, game='texasNL'):
 	RoundFlag=True
 	RoundRecord = []
 	iround =0
-	if 'texasNL' in game:
-		while RoundFlag and inplayers>1 and betplayers>1: 
-			print('Bet number: ', iround)
-			inplayers = 0
-			betplayers=0
-			for plkey in players:
-				if players[plkey].order==iround%nplayers and players[plkey].betting:
-					plind = players[plkey].order
-					if players[plkey].ai != None:
-						print('AI player.')
-					if blind_round:
-						if iround==0:
-							print('%s bets small blind: %d' %(plkey, sblind))
-							new_bet=sblind
-						elif iround==1:
-							print('%s bets big blind: %d' %(plkey, bblind))
-							new_bet=bblind
-					if (not blind_round) or (not (iround==1 or iround==0)):
-						if players[plkey].ai == None:
-							new_bet = get_bet(players,plkey,table)
-						else:
-							new_bet = players[plkey].choose_bet(players, table)
-					if new_bet>np.amax(table.roundvals):
-						RoundRecord.append(players[plkey].ID)
-					make_bet(players[plkey], table, new_bet)
-					print('%s bets : '%plkey, new_bet, ' for a total of ', table.roundvals[plind], 'this round.')
-				#the last player to take aggressive action by a bet or raise is the first to show the hand
-				#hence we need a record of who has raised last in each round
-				if not players[plkey].fold:
-					round_val = np.amax(table.roundvals)
-					inplayers+=1
-				if players[plkey].betting:
-					betplayers+=1
 
-			iround +=1
-			if iround>nplayers:
-				RoundFlag=False
+	for plkey in players:
+		if players[plkey].betting:
+			betplayers+=1
+
+	if 'texasNL' in game:
+		if betplayers>1:
+			while RoundFlag and inplayers>1: 
+				print('Bet number: ', iround)
+				inplayers = 0
+				betplayers=0
+				bet_round=False
 				for plkey in players:
-					if players[plkey].betting and table.roundvals[players[plkey].order]!=round_val:
-						RoundFlag=True
+					if players[plkey].order==iround%nplayers and players[plkey].betting:
+						plind = players[plkey].order
+						if players[plkey].ai != None:
+							print('AI player.')
+						if blind_round:
+							if iround==0:
+								print('%s bets small blind: %d' %(plkey, sblind))
+								new_bet=sblind
+							elif iround==1:
+								print('%s bets big blind: %d' %(plkey, bblind))
+								new_bet=bblind
+						if (not blind_round) or (not (iround==1 or iround==0)):
+							if players[plkey].ai == None:
+								new_bet = get_bet(players,plkey,table)
+							else:
+								new_bet = players[plkey].choose_bet(players, table)
+						if new_bet>np.amax(table.roundvals):
+							RoundRecord.append(players[plkey].ID)
+						make_bet(players[plkey], table, new_bet)
+						bet_round=True
+						print('%s bets : '%plkey, new_bet, ' for a total of ', table.roundvals[plind], 'this round.')
+					#the last player to take aggressive action by a bet or raise is the first to show the hand
+					#hence we need a record of who has raised last in each round
+					if not players[plkey].fold:
+						round_val = np.amax(table.roundvals)
+						inplayers+=1
+					if players[plkey].betting:
+						betplayers+=1
+				
+				iround +=1
+				if iround>nplayers and bet_round:
+					RoundFlag=False
+					for plkey in players:
+						if players[plkey].betting and table.roundvals[players[plkey].order]!=round_val:
+							RoundFlag=True
+						print('Round', RoundFlag, plkey, players[plkey].betting)
+						print(table.roundvals[players[plkey].order], players[plkey].order, round_val) 
 						
 			
 			bet=new_bet
@@ -500,9 +528,9 @@ Convoluted and unecessarily complicated right now... need to check all this
 In: Players, table, betting order (not used atm, for the reveal if needed)
 
 """
-def showdown(players, table, betorder, deck, gtype='std'):
+def showdown(players, table, betorder, deck,dealer, gtype='std'):
 	if gtype=='manual':
-		get_final_hands(deck, players)
+		get_final_hands(deck, players, dealer)
 	
 	print(betorder)
 	playing_hands_name={}
@@ -585,7 +613,7 @@ def play_hand(sblind, bblind, players, outplayers, dealer, table, exit, game='te
 		HANDS, DECK = init_deal(DECK, NPLAYERS)
 		assign_hand(dealer, players, HANDS)
 	elif gtype=='manual':
-		DECK = get_init_deal(DECK, players)
+		DECK = get_init_deal(DECK, players, dealer)
 	else:
 		print('Game type not recognised.')
 		
@@ -608,7 +636,7 @@ def play_hand(sblind, bblind, players, outplayers, dealer, table, exit, game='te
 		DECK = get_table(DECK, table, 1)
 	print('River: ', table.hand)
 	RoundOrder += std_round(players,  table, [0, 0], blind_round=False, game=game)
-	showdown(players, table, RoundOrder, DECK, gtype=gtype)
+	showdown(players, table, RoundOrder, DECK,dealer, gtype=gtype)
 
 	print('End of round situation:')
 	del_players= []
@@ -622,7 +650,7 @@ def play_hand(sblind, bblind, players, outplayers, dealer, table, exit, game='te
 		players.pop(delkey, None)
 	
 	#Added while testing before finished (playing one hand)
-	#exit.append(True)
+	exit.append(False)
 	return None
 """
 main
