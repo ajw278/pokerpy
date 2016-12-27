@@ -469,7 +469,7 @@ def std_round(players, table, blinds, blind_round=False, game='texasNL'):
 	if 'texasNL' in game:
 		if betplayers>1:
 			while RoundFlag and inplayers>1: 
-				print('Bet number: ', iround)
+				print('Bet number: ', iround, betplayers)
 				inplayers = 0
 				betplayers=0
 				bet_round=False
@@ -509,8 +509,8 @@ def std_round(players, table, blinds, blind_round=False, game='texasNL'):
 					for plkey in players:
 						if players[plkey].betting and table.roundvals[players[plkey].order]!=round_val:
 							RoundFlag=True
-						print('Round', RoundFlag, plkey, players[plkey].betting)
-						print(table.roundvals[players[plkey].order], players[plkey].order, round_val) 
+						#print('Round', RoundFlag, plkey, players[plkey].betting)
+						#print(table.roundvals[players[plkey].order], players[plkey].order, round_val) 
 						
 			
 			bet=new_bet
@@ -528,7 +528,7 @@ Convoluted and unecessarily complicated right now... need to check all this
 In: Players, table, betting order (not used atm, for the reveal if needed)
 
 """
-def showdown(players, table, betorder, deck,dealer, gtype='std'):
+def showdown(players, table, betorder, deck,dealer, total_orig, gtype='std'):
 	if gtype=='manual':
 		get_final_hands(deck, players, dealer)
 	
@@ -573,6 +573,15 @@ def showdown(players, table, betorder, deck,dealer, gtype='std'):
 					print('Best type: ', playing_hands_name[plkey])
 					print('Best hand: ', playing_hands[plkey])
 	
+	new_tot=0
+	for plkey in players:
+		new_tot+=players[plkey].bank
+
+	if new_tot!=total_orig:
+		print('Chip number not conserved.')
+		sys.exit() 
+
+
 	print(playing_hands)
 	return None
 
@@ -608,6 +617,10 @@ def play_hand(sblind, bblind, players, outplayers, dealer, table, exit, game='te
 	table.new_hand()
 	DECK = init_deck()
 	NPLAYERS = len(players)
+
+	ROUNDTOT=0
+	for plkey in players:
+		ROUNDTOT+=players[plkey].bank
 	
 	if gtype=='std':
 		HANDS, DECK = init_deal(DECK, NPLAYERS)
@@ -636,7 +649,7 @@ def play_hand(sblind, bblind, players, outplayers, dealer, table, exit, game='te
 		DECK = get_table(DECK, table, 1)
 	print('River: ', table.hand)
 	RoundOrder += std_round(players,  table, [0, 0], blind_round=False, game=game)
-	showdown(players, table, RoundOrder, DECK,dealer, gtype=gtype)
+	showdown(players, table, RoundOrder, DECK,dealer,ROUNDTOT, gtype=gtype)
 
 	print('End of round situation:')
 	del_players= []
