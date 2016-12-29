@@ -216,25 +216,43 @@ def get_bet(players,plyrkey, table,mindiff = 5, blind=None):
 	maximum = players[plyrkey].bank
 
 	bet = minimum-10
-	while bet<minimum or bet>maximum or bet%mindiff!=0:
-		print('Bet for %s'%plyrkey)
-		print('("f" - fold, "F - fold and show hand,  "h" - see hand, "t" - show table hand)')
-		bet = raw_input('Bet (in multiples %s) between %d and %d: ' %(mindiff, minimum, maximum))
-		if bet=='h':
-			print('Hand:', players[plyrkey].hand, '\nChips: %d' %(players[plyrkey].bank))
-		elif bet =='t':
-			print('Table: ', table.hand, '\nPot: %d' %(table.pot))
-		elif bet=='f' or bet=='F':
-			break
+	if minimum<maximum:
+		while bet<minimum or bet>maximum or bet%mindiff!=0:
+			print('Bet for %s'%plyrkey)
+			print('("f" - fold, "F - fold and show hand,  "h" - see hand, "t" - show table hand)')
+			bet = raw_input('Bet (in multiples %s) between %d and %d: ' %(mindiff, minimum, maximum))
+			if bet=='h':
+				print('Hand:', players[plyrkey].hand, '\nChips: %d' %(players[plyrkey].bank))
+			elif bet =='t':
+				print('Table: ', table.hand, '\nPot: %d' %(table.pot))
+			elif bet=='f' or bet=='F':
+				break
 
-		try:
-			bet = int(bet)
-		except ValueError:
-			pass
+			try:
+				bet = int(bet)
+			except ValueError:
+				pass
 
-		if type(bet)!=int:
-			bet=minimum-10
+			if type(bet)!=int:
+				bet=minimum-10
+	else:
+		while bet!=maximum and bet!='f' and bet!='F':
+			print('Bet for %s'%plyrkey)
+			print('("f" - fold, "F - fold and show hand,  "h" - see hand, "t" - show table hand)')
+			bet = raw_input('Would you like to go all in for %d (type "%d"): ' %(maximum, maximum))
+			if bet=='h':
+				print('Hand:', players[plyrkey].hand, '\nChips: %d' %(players[plyrkey].bank))
+			elif bet =='t':
+				print('Table: ', table.hand, '\nPot: %d' %(table.pot))
+			elif bet=='f' or bet=='F':
+				break
 
+			try:
+				bet = int(bet)
+			except ValueError:
+				pass
+		if bet==maximum:
+			bet=minimum
 	return bet
 
 """

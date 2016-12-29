@@ -1,7 +1,7 @@
 #number human players
-NHUMAN = 0
+NHUMAN = 2
 #number of computer players
-NAI = 5
+NAI = 0
 #number of suits
 KINDS = 4
 #number of values
@@ -15,4 +15,4 @@ BIG_BLIND = 20
 #poker variant - 'texasNL' 
 GAME = texasNL
 #mode - 'std', 'manual'
-TYPE = std
+TYPE = manual
