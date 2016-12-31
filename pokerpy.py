@@ -558,15 +558,8 @@ def showdown(players, table, betorder, deck,dealer, total_orig, gtype='std'):
 	for plkey in players:
 		if not players[plkey].fold:
 			tot_hand = players[plkey].hand + table.hand
-			all_hands = list(itertools.combinations(tot_hand,5))
-			all_values = np.zeros(len(all_hands))
-			for ihand in range(len(all_hands)):
-				all_values[ihand] = hand.hand_value(all_hands[ihand])
-			
-			maxind = np.argmax(all_values)
-			playing_hands[plkey] = all_hands[maxind]
-			playing_hands_name[plkey] = hand.poker_hand(all_hands[maxind])
-			playing_values[plkey] = hand.hand_value(all_hands[maxind])
+			playing_hands[plkey], playing_values[plkey] = hand.full_hand_best(tot_hand, 5)
+			playing_hands_name[plkey] = hand.poker_hand(playing_hands[plkey])
 			
 	for plkey in playing_hands:
 		max_hand_val = max(max_hand_val, playing_values[plkey])

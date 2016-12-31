@@ -18,6 +18,7 @@ from __future__ import division
 from collections import namedtuple, Counter
 import random
 import numpy as np
+import itertools
 
 CARDS_PER_HAND = 5
 VALUES = 13
@@ -180,7 +181,7 @@ def hand_value(hand, suit_vals=False):
 	value=0.0
 	subtract = 0
 	for ival in valarray:
-		value += ival*(VALUES+1)**(len(hand)-subtract)
+		value += ival*(VALUES)**(len(hand)-subtract)
 		subtract+=1	
 	
 	if suit_vals:
@@ -188,6 +189,22 @@ def hand_value(hand, suit_vals=False):
 		sys.exit()
 	
 	return value
+
+"""
+full_hand_best
+In: larger hand, max number of cards in hand
+Out: best hand, value of best hand
+"""
+def full_hand_best(full_hand, hand_size=CARDS_PER_HAND):
+
+	all_hands = list(itertools.combinations(full_hand,hand_size))
+	all_values = np.zeros(len(all_hands))
+	for ihand in range(len(all_hands)):
+		all_values[ihand] = hand_value(all_hands[ihand])
+	
+	maxind = np.argmax(all_values)
+
+	return all_hands[maxind], all_values[maxind]
 
 """
 poker_deck:
