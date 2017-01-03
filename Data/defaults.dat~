@@ -1,7 +1,7 @@
 #number human players
-NHUMAN = 2
+NHUMAN = 0
 #number of computer players
-NAI = 0
+NAI = 10
 #number of suits
 KINDS = 4
 #number of values
