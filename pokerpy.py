@@ -522,7 +522,7 @@ def std_round(players, table, blinds, blind_round=False, game='texasNL'):
 						betplayers+=1
 				
 				iround +=1
-				if iround>nplayers and bet_round or betplayers==0:
+				if iround>=nplayers and bet_round or betplayers==0:
 					RoundFlag=False
 					for plkey in players:
 						if players[plkey].betting and table.roundvals[players[plkey].order]!=round_val:
