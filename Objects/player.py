@@ -12,6 +12,9 @@
 from __future__ import print_function
 import random
 import numpy as np
+import sys
+sys.path.insert(0, '../Odds/')
+import probs
 
 """
 basic_AI
@@ -28,7 +31,10 @@ def basic_AI(self_player, players, table):
 		return 'f'
 	else:
 		return 0
-
+"""
+fix_min
+Place holder for AI routines. Always bets minimum but stays in.
+"""
 def fix_min(self_player, players, table):
 	minbet = np.amax(table.roundvals) - table.roundvals[self_player.order]
 	return minbet
