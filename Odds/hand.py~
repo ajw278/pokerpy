@@ -15,11 +15,7 @@
 
 from __future__ import print_function
 from __future__ import division
-from collections import namedtuple
-try:
-	from collections import Counter
-except:
-	import backport_Counter
+from collections import namedtuple, Counter
 import random
 import numpy as np
 import itertools

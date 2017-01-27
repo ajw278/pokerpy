@@ -33,23 +33,23 @@ def odds(table, my_cards, num_oponents):
 		his_cards = [Card(random.randint(2,14), random.randint(1,4)) for i in range(2)]
 		his_hand = sorted(table + his_cards, key=attrgetter('value'))
 		temp_score = hand_value(his_hand)
-		if temp_score > his_score:
-			his_score = temp_score
+	if temp_score > his_score:
+		his_score = temp_score
 
-		return my_score > his_score
+        return my_score > his_score
 
 def prob(table, my_cards, num_opponents, tol):
-	sigma = 1.; win =0; tot = 0; samples = []
-	while sigma > tol:
-		if odds(table, my_cards, 1) == True:
-			win+=1.
-		tot+=1.
-		p = win/tot
-		samples.append(p)
-		if tot%1000 == 0:
-			sigma = np.std(np.asarray(samples))
+    sigma = 1.; win =0; tot = 0; samples = []
+    while sigma > tol:
+        if odds(table, my_cards, 1) == True:
+            win+=1.
+        tot+=1.
+        p = win/tot
+        samples.append(p)
+        if tot%1000 == 0:
+            sigma = np.std(np.asarray(samples))
 
-	return p
+    return p
 
 print 'table cards', table
 print 'my_cards', my_cards

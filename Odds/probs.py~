@@ -10,7 +10,6 @@ import numpy as np
 import random
 import sys
 import hand
-from collections import namedtuple
 try:
 	from collections import Counter
 except:

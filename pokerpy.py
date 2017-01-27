@@ -16,9 +16,11 @@ from __future__ import print_function
 import re
 import random
 import sys
-sys.path.insert(0, './Odds/')
-sys.path.insert(0, './Objects/')
-sys.path.insert(0, './Data/')
+import os
+scriptpath = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, scriptpath+'/Odds/')
+sys.path.insert(0, scriptpath+'/Objects/')
+sys.path.insert(0, scriptpath+'/Data/')
 import hand
 import player
 import table
