@@ -60,6 +60,8 @@ class player:
 		
 		#If show is True, will allow AIs, humans to see hand
 		self.show = False
+		if AI_type==None:
+			self.show=True
 
 		#Round status - betting for in and out of chips
 		self.betting = True

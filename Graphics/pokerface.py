@@ -115,6 +115,7 @@ def main():
 	MASSIVETEXT = SCH/8
 	titlefontObj = pygame.font.Font('./Fonts/Alien_League.ttf', 75)
 	levelfontObj = pygame.font.Font('./Fonts/Alien_League.ttf', 26)
+	textfontObj = pygame.font.Font('./Fonts/Alien_League.ttf', 15)
 
 	mbg = pygame.image.load("./graphic_data/MainBG.jpg")
 	mbg = pygame.transform.scale(mbg, (SCW, SCH))
@@ -163,6 +164,8 @@ def main():
 
 	chips0 = 500
 	extrachips=0
+
+	gtype='std'
 
 	while True:
 		for e in pygame.event.get():
@@ -252,28 +255,50 @@ def main():
 			#State=0 --> init game
 			#State=1 --> deal
 			#State=2 --> play, blind
+			update_flag=False
 			if state==0:
-				#Define the card dimensions and positions
-				card_size, playerpos, AIpos, dealer_coords = im_objects.positions(SCH, SCH, 2, nplayers)
-				print(playerpos, AIpos)
+				update_flag = True
+				rect_list = []
+				#Assign players to list
+				hum_players = []
+				ai_players = []
+				for iplayer in range(nplayers):
+					if iplayer == 0:
+						hum_players.append(player.player(chips0, iplayer, None))
+					else:
+						ai_players.append(player.player(chips0, iplayer, 'basic'))
+				state=1
+				table_data = table.poker_table(nplayers)
+				#Define the card dimensions and positions 
+				player_boxes, AI_boxes, dealer_box = im_objects.position_boxes(SCH, SCH, 2, 5, ai_players, hum_players, textfontObj)
+
+				#Need to associate players with their boxes - not all that important but done a little haphazardly..
+				player_dict = {}
+				box_dict = {}
+				iplyr=0
+				for hplyr in hum_players:
+					player_dict[hplyr.ID] = hplyr
+					box_dict[hplyr.ID] = player_boxes[iplyr]
+					iplyr+=1
+
+				iplyr=0
+				for hplyr in ai_players:
+					player_dict[hplyr.ID] = hplyr
+					box_dict[hplyr.ID] = AI_boxes[iplyr]
+					iplyr+=1
 				#Define the initial dealer
 				dealer = random.randint(0, nplayers-1)
 
-				#Assign players to list
-				players = []
-				for iplayer in range(nplayers):
-					if iplayer == 0:
-						players.append(player.player(chips0, iplayer, None))
-					else:
-						players.append(player.player(chips0, iplayer, 'basic'))
-				state=1
-
 			if state==1:
+				dealer+=1
+				dealer = dealer%nplayers
 				DISPLAYSURF.blit(mbg, (CENTER[0]-SCW/2,CENTER[1]-SCH/2))
-				deck = hand.poker_deck()
-				random.shuffle(deck)
+				table_data.new_hand()
+				deck = pokerpy.init_deck()
+				
 				cardset, deck = pokerpy.init_deal(deck, nplayers)
-				iAI = 0
+				pokerpy.assign_hand(dealer, player_dict, cardset)
+				"""iAI = 0
 				cards_dict={}
 				cards_sprites = {}
 				for iplayer in range(nplayers):
@@ -293,10 +318,17 @@ def main():
 					cards_sprites[iplayer] = []
 					for ihand in range(len(cards_dict[iplayer])):
 						cards_sprites[iplayer].append(pygame.sprite.RenderPlain(cards_dict[iplayer][ihand]))
-						cards_sprites[iplayer][ihand].draw(DISPLAYSURF)	
+						cards_sprites[iplayer][ihand].draw(DISPLAYSURF)	"""
 				state=2
+
+			#State 2 is a betting stage..
+			if state==2:
+				#Do betting here
+				rect_list=[]
 					
 
+			if update_flag:
+				im_objects.update_all(DISPLAYSURF, player_dict, box_dict, table_data, dealer_box)
 
 		pygame.display.update(rect_list)
 
