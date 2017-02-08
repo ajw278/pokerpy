@@ -173,29 +173,3 @@ def position_boxes(scw, sch, cardspp, dcards, aiplayers, humanplayers, font):
 	return player_boxes, AI_boxes, dealerbox
 
 
-def update_all(display_surface, ply_lst, box_lst, table, deal_box):
-	
-	for key in ply_lst:
-		box_lst[key].update(ply_lst[key])
-		s = pygame.Surface((box_lst[key].coords[2],box_lst[key].coords[3]))  # the size of your rect
-		s.set_alpha(100)                # alpha level
-		s.fill((0,0,0))           # this fills the entire surface
-		display_surface.blit(s, (box_lst[key].coords[0],box_lst[key].coords[1]))    # (0,0) are the top-left coordinates
-		for card in box_lst[key].cards:
-			display_surface.blit(card.image, card.rect)
-		for itxt in range(len(box_lst[key].text)):
-			display_surface.blit(box_lst[key].text[itxt], box_lst[key].textloc[itxt])
-
-	deal_box.update(table)
-	s = pygame.Surface((deal_box.coords[2],deal_box.coords[3]))  # the size of your rect
-	s.set_alpha(100)                # alpha level
-	s.fill((0,0,0))           # this fills the entire surface
-	display_surface.blit(s, (deal_box.coords[0],deal_box.coords[1]))    # (0,0) are the top-left coordinates
-
-	for card in deal_box.cards:
-		display_surface.blit(card.image, card.rect)
-	display_surface.blit(deal_box.text, deal_box.textloc)
-
-	return None
-
-

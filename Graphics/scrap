@@ -1,0 +1,52 @@
+if state==0:
+				update_flag = True
+				rect_list = []
+				#Assign players to list
+				hum_players = []
+				ai_players = []
+				for iplayer in range(nplayers):
+					if iplayer == 0:
+						hum_players.append(player.player(chips0, iplayer, None))
+					else:
+						ai_players.append(player.player(chips0, iplayer, 'basic'))
+				state=1
+				table_data = table.poker_table(nplayers)
+				#Define the card dimensions and positions 
+				player_boxes, AI_boxes, dealer_box = im_objects.position_boxes(SCW, SCH, 2, 5, ai_players, hum_players, textfontObj)
+
+				#Need to associate players with their boxes - not all that important but done a little haphazardly..
+				player_dict = {}
+				box_dict = {}
+				iplyr=0
+				for hplyr in hum_players:
+					player_dict[hplyr.ID] = hplyr
+					box_dict[hplyr.ID] = player_boxes[iplyr]
+					iplyr+=1
+
+				iplyr=0
+				for hplyr in ai_players:
+					player_dict[hplyr.ID] = hplyr
+					box_dict[hplyr.ID] = AI_boxes[iplyr]
+					iplyr+=1
+				#Define the initial dealer
+				dealer = random.randint(0, nplayers-1)
+
+			if state==1:
+				dealer+=1
+				dealer = dealer%nplayers
+				DISPLAYSURF.blit(mbg, (CENTER[0]-SCW/2,CENTER[1]-SCH/2))
+				table_data.new_hand()
+				deck = pokerpy.init_deck()
+				
+				cardset, deck = pokerpy.init_deal(deck, nplayers)
+				pokerpy.assign_hand(dealer, player_dict, cardset)
+				state=2
+
+			#State 2 is a betting stage..
+			if state==2:
+				#Do betting here
+				rect_list=[]
+
+			pressed = pygame.key.get_pressed()
+			if pressed[pygame.K_SPACE]:
+				GAMESTATE = 'pausemenu'

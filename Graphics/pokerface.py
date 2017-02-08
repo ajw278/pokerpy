@@ -32,6 +32,7 @@ import sys
 sys.path.insert(0, '../Odds/')
 sys.path.insert(0, '../')
 sys.path.insert(0, '../Objects/')
+import gameplay
 import im_objects
 import hand
 import pokerpy
@@ -169,6 +170,7 @@ def main():
 			selection = gm.run()
 			if selection==menu_items[0]:
 				GAMESTATE='play'
+				state=0
 			if selection==menu_items[1]:
 				pplayers +=1
 				pplayers = pplayers%5
@@ -180,37 +182,17 @@ def main():
 			if selection==menu_items[3]:
 				sys.exit()
 		elif GAMESTATE == 'pausemenu':
-			if prev_state != state:
-				pygame.event.post(pygame.event.Event(EVENT_CHANGE_STATE, key = 0))
-				prev_state = state
-
-			# Get the next event
-			e = pygame.event.wait()
-
-			# Update the menu, based on which "state" we are in - When using the menu
-			# in a more complex program, definitely make the states global variables
-			# so that you can refer to them by a name
-			if e.type == pygame.KEYDOWN or e.type == EVENT_CHANGE_STATE:
-				if state == 0:
-					rect_list, state = pausemenu.update(e, state)
-				elif state == 1:
-					GAMESTATE = 'play'
-					state = 0
-					prev_state=1
-				elif state ==2:
-					GAMESTATE = 'menu'
-					state =0
-				else:
-					pygame.quit()
-					sys.exit()
-
-			# Quit if the user presses the exit button
-			if e.type == pygame.QUIT:
-				pygame.quit()
+			menu_items = ('Resume', 'Main Menu', 'Quit')
+			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
+				font='./Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN,
+				bg_alpha=100)
+			selection = gm.run()
+			if selection==menu_items[0]:
+				GAMESTATE='play'
+			if selection==menu_items[1]:
+				GAMESTATE='menu'
+			if selection==menu_items[2]:
 				sys.exit()
-
-			# Update the screen
-			pygame.display.update(rect_list)
 		elif GAMESTATE=='play':
 			"""
 			In this section as much as possible of the gameplay will be derived from pokerpy.py
@@ -224,62 +206,11 @@ def main():
 			#State=2 --> play, blind
 			update_flag=False
 			if state==0:
-				update_flag = True
-				rect_list = []
-				#Assign players to list
-				hum_players = []
-				ai_players = []
-				for iplayer in range(nplayers):
-					if iplayer == 0:
-						hum_players.append(player.player(chips0, iplayer, None))
-					else:
-						ai_players.append(player.player(chips0, iplayer, 'basic'))
-				state=1
-				table_data = table.poker_table(nplayers)
-				#Define the card dimensions and positions 
-				player_boxes, AI_boxes, dealer_box = im_objects.position_boxes(SCW, SCH, 2, 5, ai_players, hum_players, textfontObj)
+				game_state=None
+				poker_game = gameplay.PokerGame(DISPLAYSURF, [], textfontObj, bg_color=DARKERGREEN)
 
-				#Need to associate players with their boxes - not all that important but done a little haphazardly..
-				player_dict = {}
-				box_dict = {}
-				iplyr=0
-				for hplyr in hum_players:
-					player_dict[hplyr.ID] = hplyr
-					box_dict[hplyr.ID] = player_boxes[iplyr]
-					iplyr+=1
+			game_state, action = poker_game.run(state, nplayers,chips0, gstate=game_state)
 
-				iplyr=0
-				for hplyr in ai_players:
-					player_dict[hplyr.ID] = hplyr
-					box_dict[hplyr.ID] = AI_boxes[iplyr]
-					iplyr+=1
-				#Define the initial dealer
-				dealer = random.randint(0, nplayers-1)
-
-			if state==1:
-				dealer+=1
-				dealer = dealer%nplayers
-				DISPLAYSURF.blit(mbg, (CENTER[0]-SCW/2,CENTER[1]-SCH/2))
-				table_data.new_hand()
-				deck = pokerpy.init_deck()
-				
-				cardset, deck = pokerpy.init_deal(deck, nplayers)
-				pokerpy.assign_hand(dealer, player_dict, cardset)
-				state=2
-
-			#State 2 is a betting stage..
-			if state==2:
-				#Do betting here
-				rect_list=[]
-
-			pressed = pygame.key.get_pressed()
-			if pressed[pygame.K_SPACE]:
-				GAMESTATE = 'pausemenu'
-				
-					
-
-			if update_flag:
-				im_objects.update_all(DISPLAYSURF, player_dict, box_dict, table_data, dealer_box)
 
 		pygame.display.update(rect_list)
 

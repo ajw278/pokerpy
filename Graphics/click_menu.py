@@ -47,13 +47,14 @@ class MenuItem(pygame.font.Font):
         self.label = self.render(self.text, 1, self.font_color)
  
 class GameMenu():
-    def __init__(self, screen, items, bg_color=BLACK, font=None, font_size=30,
+    def __init__(self, screen, items, bg_color=BLACK,bg_alpha=255, font=None, font_size=30,
                  font_color=WHITE):
         self.screen = screen
         self.scr_width = self.screen.get_rect().width
         self.scr_height = self.screen.get_rect().height
  
         self.bg_color = bg_color
+        self.bg_alpha = bg_alpha
         self.clock = pygame.time.Clock()
  
         self.items = []
@@ -148,7 +149,9 @@ class GameMenu():
             self.set_mouse_visibility()
  
             # Redraw the background
+            pygame.Surface.convert_alpha(self.screen)
             self.screen.fill(self.bg_color)
+            self.screen.set_alpha(self.bg_alpha)
  
             for item in self.items:
                 if self.mouse_is_visible:
@@ -165,10 +168,13 @@ if __name__ == "__main__":
     screen = pygame.display.set_mode((640, 480), 0, 32)
  
     menu_items = ('Start', 'Quit')
-    funcs = {'Start': hello_world,
-             'Quit': sys.exit}
  
     pygame.display.set_caption('Game Menu')
     gm = GameMenu(screen, menu_items)
-    gm.run()
+    result = gm.run()
+
+    if result=='Start':
+         hello_world()
+    else:
+         sys.exit()
  
