@@ -134,18 +134,18 @@ def main():
 	# update the screen 
 	rect_list = []
 	# Ignore mouse motion (greatly reduces resources when not needed)
-	pygame.event.set_blocked(pygame.MOUSEMOTION)
 
 	#Menu state variables
 	state = 0
-	prev_state = 1
 
 	#Load defaults would be done here - set them for now
 	nplayers = 2
 	pplayers = 0
 
-	chips0 = 500
+	chips0 = 400
 	extrachips=0
+
+	blinds = [10, 20]
 
 	gtype='std'
 
@@ -178,7 +178,7 @@ def main():
 			if selection==menu_items[2]:
 				extrachips +=100
 				extrachips = extrachips%1000
-				chips0 = 500 + extrachips
+				chips0 = blinds[0]*20 + extrachips
 			if selection==menu_items[3]:
 				sys.exit()
 		elif GAMESTATE == 'pausemenu':
@@ -209,7 +209,9 @@ def main():
 				game_state=None
 				poker_game = gameplay.PokerGame(DISPLAYSURF, [], textfontObj, bg_color=DARKERGREEN)
 
-			game_state, action = poker_game.run(state, nplayers,chips0, gstate=game_state)
+			game_state, action = poker_game.run(state, nplayers,chips0, blinds,gstate=game_state)
+
+			GAMESTATE =action
 
 
 		pygame.display.update(rect_list)

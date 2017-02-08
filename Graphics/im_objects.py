@@ -109,6 +109,7 @@ Create a box image in which the player data and cards are displayed
 class dealer_box(object):
 	def __init__(self,font, dims, ncards, csize):
 		#dims - left, top, width, height
+		vspace = 0.5
 		self.coords= dims
 		self.rect = pygame.Rect(dims)
 		self.margin = dims[2]/10
@@ -118,19 +119,31 @@ class dealer_box(object):
 			cardpos.append(((self.csize[0]*1.05)*icard+self.margin,self.csize[1]/3.))
 		self.ccoords = cardpos
 		self.font =font
-		self.text = self.font.render("", 1, (0,0,0))
+		self.text = [self.font.render("", 1, (0,0,0))]
 		self.textloc = (dims[0],dims[1])
+		self.txtrct = []
+		self.textloc = []
+		shft_down = 0
+		for itxt in range(len(self.text)):
+			self.txtrct.append(self.text[itxt].get_rect())
+			shft_down+=self.txtrct[itxt].height
+			self.textloc.append((dims[0]+int(float(dims[2]-self.txtrct[itxt].width)/2.),dims[1]+int(itxt*1.1*self.txtrct[itxt].height)))
 		self.cards = []
+		self.cardpos = []
+		for icard in range(ncards):
+			px  = int((self.csize[0]*1.05)*icard+self.margin+self.csize[0]/2.)
+			py = int((0.9-vspace)*dims[3]+shft_down)
+			self.cardpos.append((px,py))
 
 	def update(self, table):
 		if table.pot>0:
-			self.text = self.font.render("Pot: {0.pot}".format(table), 1, (0,0,0))
+			self.text = [self.font.render("Pot: {0.pot}".format(table), 1, (0,0,0))]
 		else:
-			self.text = self.font.render("", 1, (0,0,0))
+			self.text = [self.font.render("", 1, (0,0,0))]
 		self.cards=[]
 		for icard in range(len(table.hand)):
 			position = (int(self.cardpos[icard][0]+self.coords[0]), int(self.cardpos[icard][1]+self.coords[1]))
-			self.cards.append(table_card(table.hand[icard], position, self.csize, player.show))
+			self.cards.append(table_card(table.hand[icard], position, self.csize, True))
 
 """
 position_boxes:
@@ -157,12 +170,9 @@ def position_boxes(scw, sch, cardspp, dcards, aiplayers, humanplayers, font):
 	
 
 	Hy = 1.-boxdims[1]-margin
-	print('Hy: ', Hy, ' boxdims: ', boxdims)
 	for ibox in range(nhumans):
 		Hx = boxdims[0]*ibox +margin/2. +left0h
 		dims = (Hx*scw, Hy*sch,boxdims[0]*scw, boxdims[1]*sch)
-		print(dims)
-		print(scw, sch)
 		player_boxes.append(player_box(font, dims, humanplayers[ibox], cardspp))
 		csize = player_boxes[ibox].csize
 
