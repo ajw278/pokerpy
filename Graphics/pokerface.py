@@ -15,6 +15,7 @@
 from __future__ import print_function
 
 import menu
+import click_menu
 
 import sys
 import random
@@ -113,34 +114,14 @@ def main():
 	MIDTEXT = SCH/25
 	LARGETEXT = SCH/15
 	MASSIVETEXT = SCH/8
-	titlefontObj = pygame.font.Font('./Fonts/Alien_League.ttf', 75)
-	levelfontObj = pygame.font.Font('./Fonts/Alien_League.ttf', 26)
-	textfontObj = pygame.font.Font('./Fonts/Alien_League.ttf', 15)
+	titlefontObj = pygame.font.Font('./Fonts/Alien_League.ttf', LARGETEXT)
+	levelfontObj = pygame.font.Font('./Fonts/Alien_League.ttf', MIDTEXT)
+	textfontObj = pygame.font.Font('./Fonts/Alien_League.ttf', SMALLTEXT)
 
 	mbg = pygame.image.load("./graphic_data/MainBG.jpg")
 	mbg = pygame.transform.scale(mbg, (SCW, SCH))
 
-	# Create 3 diffrent menus.  One of them is only text, another one is only
-	# images, and a third is -gasp- a mix of images and text buttons!  To
-	# understand the input factors, see the menu file
-	main_menu = menu.cMenu(SCW/2-int(float(LARGETEXT)*2.5), 2*SCH/7, 20, 5, 'vertical', 100, DISPLAYSURF,
-	       [('Play Poker', 1, None),
-		('Training', 3, None),
-		('Settings', 4, None),
-		('Data',  2, None),
-		('Exit',       5, None)], TRANSP, LARGETEXT)
-
-	# Center the menu on the draw_surface (the entire screen here)
-	#main_menu.set_center(False, False)
-
-	main_menu.set_alignment('center', 'center')
-
-	settings_menu = menu.cMenu(SCW/5, 2*SCH/7, 20, 5, 'vertical', 100, DISPLAYSURF,
-	       [('Play', 1, None),
-		('Number Players', 2, None),
-		('Starting Chips', 3, None),
-		('Exit',       4, None)], TRANSP, LARGETEXT-5)
-
+	
 	GAMESTATE = 'menu'
 	
 	titletextX = SCW/2
@@ -173,77 +154,63 @@ def main():
 				pygame.display.toggle_fullscreen()
 
 		if GAMESTATE == 'menu':
-			if prev_state != state:
-				DISPLAYSURF.blit(mbg, (CENTER[0]-SCW/2,CENTER[1]-SCH/2))
-				DISPLAYSURF.blit(titletextSurfaceObj, titletextRectObj)
-				pygame.event.post(pygame.event.Event(EVENT_CHANGE_STATE, key = 0))
-				prev_state = state
-
-			# Get the next event
-			e = pygame.event.wait()
-
-			# Update the menu, based on which "state" we are in 
-			if e.type == pygame.KEYDOWN or e.type == EVENT_CHANGE_STATE:
-				if state == 0:
-					rect_list, state = main_menu.update(e, state)
-				elif state == 1:
-					state = 0 
-					prev_state=1
-					GAMESTATE='gamesetup'
-				elif state == 2:
-					state =0
-				elif state ==3:
-					state =0
-				elif state ==4:
-					state=0
-				else:
-					state=0
-					terminate()
-
-			# Quit if the user presses the exit button
-			if e.type == pygame.QUIT:
-				pygame.quit()
+			menu_items = ('Start', 'Quit')
+			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
+				font='./Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN)
+			selection = gm.run()
+			if selection==menu_items[0]:
+				GAMESTATE='gamesetup'
+			if selection==menu_items[1]:
 				sys.exit()
 		elif GAMESTATE=='gamesetup':
+			menu_items = ('Play', 'Number Players', 'Starting Bank', 'Quit')
+			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
+				font='./Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN)
+			selection = gm.run()
+			if selection==menu_items[0]:
+				GAMESTATE='play'
+			if selection==menu_items[1]:
+				pplayers +=1
+				pplayers = pplayers%5
+				nplayers=2+pplayers
+			if selection==menu_items[2]:
+				extrachips +=100
+				extrachips = extrachips%1000
+				chips0 = 500 + extrachips
+			if selection==menu_items[3]:
+				sys.exit()
+		elif GAMESTATE == 'pausemenu':
 			if prev_state != state:
-				DISPLAYSURF.blit(mbg, (CENTER[0]-SCW/2,CENTER[1]-SCH/2))
-				DISPLAYSURF.blit(titletextSurfaceObj, titletextRectObj)
-				nplaytxt, nplayrect = textobj(str(nplayers), LARGETEXT-5, (4*SCW/5, 2*SCH/7 + 5+(LARGETEXT-5)))
-				chipstxt, chipsrect = textobj(str(chips0), LARGETEXT-5, (4*SCW/5, 2*SCH/7 + 2*(5+(LARGETEXT-5))))
 				pygame.event.post(pygame.event.Event(EVENT_CHANGE_STATE, key = 0))
-				DISPLAYSURF.blit(nplaytxt,nplayrect)
 				prev_state = state
 
 			# Get the next event
 			e = pygame.event.wait()
 
-			# Update the menu, based on which "state" we are in 
+			# Update the menu, based on which "state" we are in - When using the menu
+			# in a more complex program, definitely make the states global variables
+			# so that you can refer to them by a name
 			if e.type == pygame.KEYDOWN or e.type == EVENT_CHANGE_STATE:
-				if state==0:
-					rect_list, state = settings_menu.update(e, state)
+				if state == 0:
+					rect_list, state = pausemenu.update(e, state)
 				elif state == 1:
-					state = 0 
+					GAMESTATE = 'play'
+					state = 0
 					prev_state=1
-					GAMESTATE='play'
-				elif state == 2:
-					pplayers +=1
-					pplayers = pplayers%5
-					nplayers=2+pplayers
-					state=0
-				elif state ==3:
-					extrachips +=100
-					extrachips = extrachips%1000
-					chips0 = 500 + extrachips
+				elif state ==2:
+					GAMESTATE = 'menu'
 					state =0
-				elif state ==4:
-					state=0
 				else:
-					terminate()
+					pygame.quit()
+					sys.exit()
 
 			# Quit if the user presses the exit button
 			if e.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit()
+
+			# Update the screen
+			pygame.display.update(rect_list)
 		elif GAMESTATE=='play':
 			"""
 			In this section as much as possible of the gameplay will be derived from pokerpy.py
@@ -270,7 +237,7 @@ def main():
 				state=1
 				table_data = table.poker_table(nplayers)
 				#Define the card dimensions and positions 
-				player_boxes, AI_boxes, dealer_box = im_objects.position_boxes(SCH, SCH, 2, 5, ai_players, hum_players, textfontObj)
+				player_boxes, AI_boxes, dealer_box = im_objects.position_boxes(SCW, SCH, 2, 5, ai_players, hum_players, textfontObj)
 
 				#Need to associate players with their boxes - not all that important but done a little haphazardly..
 				player_dict = {}
@@ -298,33 +265,17 @@ def main():
 				
 				cardset, deck = pokerpy.init_deal(deck, nplayers)
 				pokerpy.assign_hand(dealer, player_dict, cardset)
-				"""iAI = 0
-				cards_dict={}
-				cards_sprites = {}
-				for iplayer in range(nplayers):
-					cards_dict[iplayer] = []
-					if players[iplayer].ai == None:
-						icard = 0
-						for card in cardset[(dealer+iplayer)%nplayers]:
-							cards_dict[iplayer].append(im_objects.table_card(card, playerpos[icard], card_size, True))	
-							icard+=1
-					else:
-						icard = 0
-						for card in cardset[(dealer+iplayer)%nplayers]:
-							print(AIpos[iAI][icard], iAI, icard)
-							cards_dict[iplayer].append(im_objects.table_card(card, AIpos[iAI][icard], card_size, False))
-							icard+=1
-						iAI+=1
-					cards_sprites[iplayer] = []
-					for ihand in range(len(cards_dict[iplayer])):
-						cards_sprites[iplayer].append(pygame.sprite.RenderPlain(cards_dict[iplayer][ihand]))
-						cards_sprites[iplayer][ihand].draw(DISPLAYSURF)	"""
 				state=2
 
 			#State 2 is a betting stage..
 			if state==2:
 				#Do betting here
 				rect_list=[]
+
+			pressed = pygame.key.get_pressed()
+			if pressed[pygame.K_SPACE]:
+				GAMESTATE = 'pausemenu'
+				
 					
 
 			if update_flag:

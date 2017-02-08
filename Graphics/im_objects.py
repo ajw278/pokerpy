@@ -68,28 +68,35 @@ Create a box image in which the player data and cards are displayed
 class player_box(object):
 	def __init__(self, font, dims, player, ncards):
 		#dims - left, top, width, height
+		vspace = 0.5
 		self.coords = dims
 		self.rect = pygame.Rect(dims)
-		self.margin = dims[2]/10
+		self.margin = int(float(dims[2])/10.)
 		self.font = font
-		self.text =self.font.render("Player: {0.ID}\nChips: {0.bank}".format(player), 1, (0,0,0))
-		self.textloc = (dims[0],dims[1])
+		self.text =[self.font.render("Player: {0.ID}".format(player), 1, (0,0,0)),self.font.render("Chips: {0.bank}".format(player), 1, (0,0,0))]
+		self.txtrct = []
+		self.textloc = []
+		shft_down = 0
+		for itxt in range(len(self.text)):
+			self.txtrct.append(self.text[itxt].get_rect())
+			shft_down+=self.txtrct[itxt].height
+			self.textloc.append((dims[0]+int(float(dims[2]-self.txtrct[itxt].width)/2.),dims[1]+int(itxt*1.1*self.txtrct[itxt].height)))
 		self.cardpos = []
-		cwdth = int(float(dims[2]-2*self.margin)/float(ncards))
-		self.csize = (cwdth, int(float(cwdth)/CW2H))
+		cwdth = int(float(dims[2]*0.9-2*self.margin)/float(ncards))
+		self.csize = (cwdth, min(int(float(cwdth)/CW2H), int(vspace*dims[3])))
 		for icard in range(ncards):
-			self.cardpos.append((int((self.csize[0]*1.05)*icard+self.margin),int(self.csize[1]/3.)))
+			px  = int((self.csize[0]*1.05)*icard+self.margin+self.csize[0]/2.)
+			py = int((0.9-vspace)*dims[3]+shft_down)
+			self.cardpos.append((px,py))
 		self.cards = []
 		
 
 
 	def update(self, player):
-		self.text = self.font.render("Player: {0.ID}\nChips: {0.bank}".format(player), 1, (0,0,0))
-		
+		self.text =[self.font.render("Player: {0.ID}".format(player), 1, (0,0,0)),self.font.render("Chips: {0.bank}".format(player), 1, (0,0,0))]
 		self.cards=[]
 		for icard in range(len(player.hand)):
 			position = (int(self.cardpos[icard][0]+self.coords[0]), int(self.cardpos[icard][1]+self.coords[1]))
-			print(player.ID, player.show)
 			self.cards.append(table_card(player.hand[icard], position, self.csize, player.show))
 
 		
@@ -100,8 +107,9 @@ class, player_box
 Create a box image in which the player data and cards are displayed
 """
 class dealer_box(object):
-	def __init__(self, dims, ncards, csize):
+	def __init__(self,font, dims, ncards, csize):
 		#dims - left, top, width, height
+		self.coords= dims
 		self.rect = pygame.Rect(dims)
 		self.margin = dims[2]/10
 		cardpos = []
@@ -109,9 +117,16 @@ class dealer_box(object):
 		for icard in range(ncards):
 			cardpos.append(((self.csize[0]*1.05)*icard+self.margin,self.csize[1]/3.))
 		self.ccoords = cardpos
+		self.font =font
+		self.text = self.font.render("", 1, (0,0,0))
+		self.textloc = (dims[0],dims[1])
 		self.cards = []
 
 	def update(self, table):
+		if table.pot>0:
+			self.text = self.font.render("Pot: {0.pot}".format(table), 1, (0,0,0))
+		else:
+			self.text = self.font.render("", 1, (0,0,0))
 		self.cards=[]
 		for icard in range(len(table.hand)):
 			position = (int(self.cardpos[icard][0]+self.coords[0]), int(self.cardpos[icard][1]+self.coords[1]))
@@ -129,27 +144,31 @@ def position_boxes(scw, sch, cardspp, dcards, aiplayers, humanplayers, font):
 
 	AI_boxes = []
 	player_boxes = []
-	margin =0.1
-	boxdims = (min((1.0-margin)/float(nplayers-nhumans), 0.2), 0.1)
-	left0ai = 0.5-boxdims[0]*(1.+(nplayers-nhumans))/2.
-	left0h = 0.5-boxdims[0]*(1.+nhumans)/2.
-	AIy = 0.8
+	margin =0.05
+	scale = min((1.0-margin)/float(nplayers-nhumans), 0.2)
+	boxdims = (scale, 0.25)
+	left0ai = 0.5-boxdims[0]*(1.+(nplayers-nhumans-1))/2.
+	left0h = 0.5-boxdims[0]*(1.+nhumans-1)/2.
+	AIy = margin
 	for ibox in range(nplayers-nhumans):
 		AIx = boxdims[0]*ibox+margin/2.+left0ai
 		dims = (AIx*scw, AIy*sch,boxdims[0]*scw, boxdims[1]*sch)
 		AI_boxes.append(player_box(font, dims, aiplayers[ibox], cardspp))
 	
 
-	Hy = 0.2
+	Hy = 1.-boxdims[1]-margin
+	print('Hy: ', Hy, ' boxdims: ', boxdims)
 	for ibox in range(nhumans):
 		Hx = boxdims[0]*ibox +margin/2. +left0h
 		dims = (Hx*scw, Hy*sch,boxdims[0]*scw, boxdims[1]*sch)
+		print(dims)
+		print(scw, sch)
 		player_boxes.append(player_box(font, dims, humanplayers[ibox], cardspp))
 		csize = player_boxes[ibox].csize
 
-	deal_dims = (0.6*scw, 0.3*sch, 0.5*scw, 0.5*sch)
+	deal_dims = (0.25*scw, 3.*sch/8., 0.5*scw, 0.25*sch)
 
-	dealerbox = dealer_box(deal_dims, dcards, csize)
+	dealerbox = dealer_box(font, deal_dims, dcards, csize)
 
 	return player_boxes, AI_boxes, dealerbox
 
@@ -158,13 +177,24 @@ def update_all(display_surface, ply_lst, box_lst, table, deal_box):
 	
 	for key in ply_lst:
 		box_lst[key].update(ply_lst[key])
+		s = pygame.Surface((box_lst[key].coords[2],box_lst[key].coords[3]))  # the size of your rect
+		s.set_alpha(100)                # alpha level
+		s.fill((0,0,0))           # this fills the entire surface
+		display_surface.blit(s, (box_lst[key].coords[0],box_lst[key].coords[1]))    # (0,0) are the top-left coordinates
 		for card in box_lst[key].cards:
 			display_surface.blit(card.image, card.rect)
-		display_surface.blit(box_lst[key].text, box_lst[key].textloc)
+		for itxt in range(len(box_lst[key].text)):
+			display_surface.blit(box_lst[key].text[itxt], box_lst[key].textloc[itxt])
 
 	deal_box.update(table)
+	s = pygame.Surface((deal_box.coords[2],deal_box.coords[3]))  # the size of your rect
+	s.set_alpha(100)                # alpha level
+	s.fill((0,0,0))           # this fills the entire surface
+	display_surface.blit(s, (deal_box.coords[0],deal_box.coords[1]))    # (0,0) are the top-left coordinates
+
 	for card in deal_box.cards:
 		display_surface.blit(card.image, card.rect)
+	display_surface.blit(deal_box.text, deal_box.textloc)
 
 	return None
 
