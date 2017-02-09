@@ -115,4 +115,7 @@ class player:
 		self.betting = False
 		self.fold = True
 		self.show  = show
+
+	def eliminate(self):
+		self.betting=False
 		

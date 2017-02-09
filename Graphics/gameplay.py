@@ -3,6 +3,7 @@
 """
 Notes:
 - Not sure the right nplayers being used - need to check when players are knocked out
+- A lot of errors regarding who is out, who is allowed to bet and pot division
 """
 from __future__ import print_function
 
@@ -19,6 +20,7 @@ import random
 import entry
 import hand
 import numpy as np
+import time
 
 from socket import *
 #from menu import *
@@ -179,12 +181,25 @@ class GameState():
 				print(plkey, 'unfolded')
 				self.betplayers+=1
 		
-	
+	def eliminate_players(self):
+		for plkey in self.players:
+			if self.players[plkey].bank==0:
+				self.players[plkey].eliminate()
+
+		self.update_players()
+
+
 	def add_record(self,record):
 		self.roundorder+=record
 
 	def new_state(self, nstate):
 		self.state=nstate
+
+	def payout(self, win_inds):
+		payouts = self.table.payout(win_inds)
+		for plkey in self.players:
+			self.players[plkey].win(payouts[self.players[plkey].order])
+		
 
 
 	"""
@@ -263,7 +278,7 @@ def ask_bet(pgame,gstate,plyrkey):
 				bet=minimum-10
 	else:
 		while bet!=maximum and bet!='f' and bet!='F':
-			bet = ask('Would you like to go all in for %d (type "%d"): ' %(maximum, maximum))
+			bet = ask(pgame.screen, pgame.fontObj, prompt_string = 'Would you like to go all in for %d (type "%d"): '%(maximum, maximum))
 			if bet=='f' or bet=='F':
 				break
 
@@ -347,7 +362,7 @@ Convoluted and unecessarily complicated right now... need to check all this
 In: Players, table, betting order (not used atm, for the reveal if needed)
 
 """
-def showdown(pgame, gstate, display=None, gtype=None):
+def showdown(pgame, gstate, gtype=None):
 	if gtype=='manual':
 		get_final_hands(deck, players, dealer)
 	
@@ -371,27 +386,75 @@ def showdown(pgame, gstate, display=None, gtype=None):
 			win_inds.append(gstate.players[plkey].order)
 
 	
+	gstate.payout(win_inds)
 	payouts = gstate.table.payout(win_inds)
 	
 	for ipay in range(len(payouts)):
 		for plkey in gstate.players:
 			if gstate.players[plkey].order==ipay:
-				gstate.players[plkey].win(payouts[ipay])
 				print('\nWinnings for %s: %d'%(plkey, payouts[ipay]))
 				print('Hand: ', gstate.players[plkey].hand)
 				print('Table hand: ', gstate.table.hand)
 				if plkey in playing_hands:
 					print('Best type: ', playing_hands_name[plkey])
 					print('Best hand: ', playing_hands[plkey])
+		
+	
+	px = pgame.screen.get_rect().width/2
+
+	sch = pgame.screen.get_rect().height
+	py_mid = sch/2
+	py = np.linspace(-0.3,0.3, gstate.inplayers)
+
+	pgame.screen.fill((0,0,0))
+
+	ipy=0
+	for plkey in gstate.players:
+		if gstate.players[plkey].betting:
+			if plkey in playing_hands_name:
+				hand_name = playing_hands_name[plkey]
+			else:
+				hand_name = 'fold'
+			win_text= pgame.fontObj.render("Player {0.ID} ({1}): {2}".format(gstate.players[plkey], playing_hands_name[plkey],payouts[gstate.players[plkey].order] ), 1, (255,0,0))
+			win_rect = win_text.get_rect()
+			win_rect.center = (px, py_mid+py[ipy]*sch)
+			print(win_rect.center, px, sch)
+			pgame.screen.blit(win_text, win_rect)
+			print('Blitting: ', plkey)
+			ipy+=1
+			
+	pygame.display.flip()
+	time.sleep(5)
 	
 	new_tot=0
 	for plkey in gstate.players:
 		new_tot+=gstate.players[plkey].bank
 
+	if new_tot!=400*gstate.nplayers:
+		print('Bank discrepancy')
+		sys.exit()
+
 
 	print(playing_hands)
 	return None
 
+
+def winner_screen(pgame, gstate):
+
+	pgame.screen.fill((0,0,0))
+	px = pgame.screen.get_rect().width/2
+	py = pgame.screen.get_rect().height/2
+	for plkey in gstate.players:
+		if gstate.players[plkey].betting:
+			win_text= pgame.fontObj.render("Winner: Player {0.ID} ({0.bank})".format(gstate.players[plkey]), 1, (255,0,0))
+			win_rect = win_text.get_rect()
+			win_rect.center = (px, py)
+			pgame.screen.blit(win_text, win_rect)
+			
+	pygame.display.flip()
+	pygame.display.flip
+	time.sleep(10)
+	return None
 
 
 """
@@ -481,15 +544,29 @@ class PokerGame():
 				gstate.new_hand()
 			elif gstate.state==2:
 				std_round(self, gstate, blind_round=True, display = self.screen)
+				gstate.new_state(3)
+			elif gstate.state==3:
 				gstate.flop()
 				std_round(self, gstate, blind_round=False, display = self.screen)
+				gstate.new_state(4)
+			elif gstate.state==4:
 				gstate.turn()
 				std_round(self, gstate, blind_round=False, display = self.screen)
+				gstate.new_state(5)
+			elif gstate.state==5:
 				gstate.river()
 				std_round(self, gstate, blind_round=False, display = self.screen)
-				showdown(self, gstate, display=self.screen)
-				gstate.new_state(3)
+				showdown(self, gstate)
+				gstate.eliminate_players()
+				if gstate.inplayers>1:
+					gstate.new_state(1)
+				else:
+					gstate.new_state(6)
+			elif gstate.state==6:
+				winner_screen(self, gstate)
+				return gstate, 'menu'
 			else:
+				print('Game state error.')
 				sys.exit()
 
 			if gstate.state!=prev_state:
