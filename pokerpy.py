@@ -108,6 +108,7 @@ Out: list of hands, reduced deck
 def init_deal(shuffled_deck, nplayers, mode='texasNL'):
 
 	all_hands = []
+	print('Number players: ', nplayers)
 
 	if mode=='texasNL':
 		for iplayer in range(nplayers):
@@ -169,22 +170,29 @@ In: dealer index, player dictionary, hand list
 Out: player dictionary with hands assigned
 """
 def assign_hand(dealer, players, hands):
-	nplayers = len(players)
+	nplayers = 0
+	for plkey in players:
+		if not players[plkey].out:
+			nplayers+=1
 	hands_all = range(len(hands))
 	IDs = []
+	ninplayers = 0
 	for plyr_key in players:
-		IDs.append(players[plyr_key].ID)
+		if not players[plyr_key].out:
+			ninplayers+=1
+			IDs.append(players[plyr_key].ID)
 	
 	IDs = sorted(IDs)
 
 	iID=0
+	ninplayers = 0
 	for ID in IDs:
 		for plyr_key in players:
 			if players[plyr_key].ID==ID:
 				oorder = iID
 				players[plyr_key].new_round((oorder+dealer)%nplayers)
 				for hand_no in hands_all:
-					if players[plyr_key].order==hand_no%nplayers:
+					if players[plyr_key].order==hand_no:
 						players[plyr_key].deal_cards(hands[hand_no])
 	
 		
@@ -196,11 +204,24 @@ def assign_hand(dealer, players, hands):
 	print('PLAYERS', players)
 	for plkey in players:
 		print(players[plkey].order)
-		if players[plkey].hand in all_hands:
+		if players[plkey].hand in all_hands and not players[plkey].out:
 			print('Repeated hand error.')
+			print(hands)
+			print(all_hands)
+			print('Error on :', plkey)
+			for plkey2 in players:
+				print(plkey2, players[plkey2].order, players[plkey2].hand,players[plkey2].out)
+			sys.exit()
+		elif len(players[plkey].hand)>2:
+			print('Temporary error - >2 cards in hand')
 			print(hands)
 			for plkey2 in players:
 				print(plkey2, players[plkey2].order, players[plkey2].hand)
+			sys.exit()
+		elif len(hands)>len(players):
+			print('More hands than players..')
+			print(len(hands), len(players))
+			print('In players ', ninplayers)
 			sys.exit()
 		all_hands.append(players[plkey].hand)
 
@@ -548,7 +569,7 @@ Convoluted and unecessarily complicated right now... need to check all this
 In: Players, table, betting order (not used atm, for the reveal if needed)
 
 """
-def showdown(players, table, betorder, deck,dealer, total_orig, gtype='std'):
+def showdown(players, table, betorder, deck,dealer, total_orig,mindiff = 5, gtype='std'):
 	if gtype=='manual':
 		get_final_hands(deck, players, dealer)
 	
@@ -556,24 +577,28 @@ def showdown(players, table, betorder, deck,dealer, total_orig, gtype='std'):
 	playing_hands_name={}
 	playing_hands = {}
 	playing_values = {}
+	tiebreak_values = {}
 	max_hand_val =0
 	for plkey in players:
-		if not players[plkey].fold:
+		if not players[plkey].fold and not players[plkey].out:
 			tot_hand = players[plkey].hand + table.hand
 			playing_hands[plkey], playing_values[plkey] = hand.full_hand_best(tot_hand, 5)
+			tiebreak_values[plkey] = hand.tiebreaker(players[plkey].hand)
 			playing_hands_name[plkey] = hand.poker_hand(playing_hands[plkey])
 			
 	for plkey in playing_hands:
 		max_hand_val = max(max_hand_val, playing_values[plkey])
 
 	win_inds = []
+	tbreak_vals = []
 
 	for plkey in playing_hands:
 		if playing_values[plkey]==max_hand_val:
 			win_inds.append(players[plkey].order)
+			tbreak_vals.append(tiebreak_values[plkey])
 
 	
-	payouts = table.payout(win_inds)
+	payouts = table.payout(win_inds, tbreak_vals, mindiff)
 	
 	for ipay in range(len(payouts)):
 		for plkey in players:

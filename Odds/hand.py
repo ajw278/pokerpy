@@ -194,6 +194,34 @@ def hand_value(hand, suit_vals=False):
 	
 	return value
 
+def tiebreaker(hand):
+	valarray = np.zeros(2, dtype=int)
+
+	c_values = np.asarray(values(hand))
+	c_kinds = np.asarray(kinds(hand))
+	max_val = np.amax(c_values)
+	bool_array = c_values==max_val
+	cmax=0
+	for ind in range(len(c_values)):
+		if bool_array[ind]:
+			if c_kinds[ind]>=cmax:
+				max_ind =ind
+
+	print('Tie break biggest card: ', hand[max_ind])
+	print('From total hand: ', hand)
+
+	valarray[0] = c_values[max_ind]
+	valarray[1] = c_kinds[max_ind]
+
+	print('Check: ', c_values[max_ind], c_kinds[max_ind])
+	
+
+	value=0.0
+	value += valarray[0]*(VALUES)
+	value += valarray[1]
+	
+	return value
+
 """
 full_hand_best
 In: larger hand, max number of cards in hand

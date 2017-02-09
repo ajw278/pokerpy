@@ -143,6 +143,7 @@ def main():
 	pplayers = 0
 
 	chips0 = 400
+	mindiff=5
 	extrachips=0
 
 	blinds = [10, 20]
@@ -209,7 +210,7 @@ def main():
 				game_state=None
 				poker_game = gameplay.PokerGame(DISPLAYSURF, [], textfontObj, bg_color=DARKERGREEN)
 
-			game_state, action = poker_game.run(state, nplayers,chips0, blinds,gstate=game_state)
+			game_state, action = poker_game.run(state, nplayers,chips0, blinds,mindiff, gstate=game_state)
 
 			GAMESTATE =action
 

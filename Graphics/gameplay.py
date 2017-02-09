@@ -4,6 +4,19 @@
 Notes:
 - Not sure the right nplayers being used - need to check when players are knocked out
 - A lot of errors regarding who is out, who is allowed to bet and pot division
+- Convention re. players that are out:
+--> Need to continue to add 1 to the dealer->base dealer on last ID
+e.g. 0(1) 1(2) 2(3) 3(0), 2 dealer, 3 eliminated --> 0(3) 1(0) 2(1) 3(2), 0 dealer
+Routine should look like this:
+	NoDealer = True
+	while NoDealer:
+		dealer+=1
+		for plkey in gstate.players:
+			if gstate.players[plkey].ID==dealer and not gstate.players[plkey].out:
+				NoDealer=False
+
+but now its cleaner to go without the extra order:
+3 eliminated --> 0(2) 1(0) 2(1) 3(_) 0 dealer
 """
 from __future__ import print_function
 
@@ -21,6 +34,7 @@ import entry
 import hand
 import numpy as np
 import time
+import copy
 
 from socket import *
 #from menu import *
@@ -38,6 +52,14 @@ number_chars='0123456789'
 letter_chars ='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 
+
+def GameGraphics():
+	def __init__(self, screen, fontObj):
+		self.screen = screen
+		self.scr_rect = self.screen.get_rect()
+		player_boxes, AI_boxes, dealer_box, deal_button = im_objects.position_boxes(self.scr_rect.width, self.scr_rect.height, 2, 5, ai_players, hum_players, fontObj, dealer)
+
+
 """
 class, GameState
 If I was doing this properly there should be a class which holds
@@ -47,9 +69,14 @@ For the time being, this holds the game state for the graphical version,
 including graphical data
 """
 class GameState():
-	def __init__(self,scw, sch, nplayers,chips0,blinds, textfontObj):
+	def __init__(self, nplayers,chips0,blinds, mindiff, fontObj=None, dealer=None, screen=None):
 		hum_players = []
 		ai_players = []
+		if dealer==None:
+			self.dealer = random.randint(0, nplayers-1)
+		else:
+			self.dealer = dealer
+		
 		for iplayer in range(nplayers):
 			if iplayer == 0:
 				hum_players.append(player.player(chips0, iplayer, None))
@@ -57,8 +84,6 @@ class GameState():
 				ai_players.append(player.player(chips0, iplayer, 'basic'))
 		state=1
 		table_data = table.poker_table(nplayers)
-		#Define the card dimensions and positions 
-		player_boxes, AI_boxes, dealer_box = im_objects.position_boxes(scw, sch, 2, 5, ai_players, hum_players, textfontObj)
 
 		#Need to associate players with their boxes - not all that important but done a little haphazardly..
 		player_dict = {}
@@ -80,29 +105,51 @@ class GameState():
 		self.tbox = dealer_box
 		self.players = player_dict
 		self.pboxes = box_dict
-		self.dealer = random.randint(0, nplayers-1)
+		self.schip = mindiff
 		self.state=1
 		self.deck = pokerpy.init_deck()
-		self.inplayers = 0
+		self.betplayers = 0
 		self.nplayers = len(self.players)
 		self.iround = 0
 		self.roundorder = []
 		for plkey in self.players:
 			if self.players[plkey].betting:
-				self.inplayers+=1
-		self.betplayers =0
+				self.betplayers+=1
+		self.inplayers =0
 		for plkey in self.players:
-			if not self.players[plkey].fold and self.players[plkey].betting:
+			if not self.players[plkey].fold and not self.players[plkey].out:
 				self.inplayers+=1
+		self.playing=0
+		for plkey in self.players:
+			if not self.players[plkey].out:
+				self.playing+=1
 
-	def move_dealer(self,iplayer):
-		self.dealer = iplayer%self.inplayers
+	def move_dealer(self):
+		NoDealer = True
+		nloops=0
+		while NoDealer:
+			self.dealer+=1
+			self.dealer = self.dealer%self.nplayers
+			for plkey in self.players:
+				if self.players[plkey].ID==self.dealer and not self.players[plkey].out:
+					NoDealer=False
+
+			nloops+=1
+			if nloops>self.nplayers+1:
+				print('Dealer search error.')
+				sys.exit()
 
 	def new_hand(self):
+		for plkey in self.players:
+			if self.players[plkey].bank>0:
+				self.players[plkey].new_round()
+			else:
+				self.players[plkey].eliminate()
+		self.update_players()
 		self.roundorder=[]
 		self.deck = pokerpy.init_deck()
 		self.table.new_hand()
-		cardset, deck = pokerpy.init_deal(self.deck, self.table.nplayers)
+		cardset, self.deck = pokerpy.init_deal(self.deck, self.playing)
 		pokerpy.assign_hand(self.dealer, self.players, cardset)
 		self.state=2
 		self.iround=0
@@ -113,12 +160,17 @@ class GameState():
 			self.pboxes[key].update(self.players[key])
 			s = pygame.Surface((self.pboxes[key].coords[2],self.pboxes[key].coords[3]))  # the size of your rect
 			s.set_alpha(100)                # alpha level
-			s.fill((0,0,0))           # this fills the entire surface
+			if not self.players[key].turn:
+				s.fill((0,0,0)) 
+			else:
+				s.fill((255,0,0))
 			display_surface.blit(s, (self.pboxes[key].coords[0],self.pboxes[key].coords[1]))    # (0,0) are the top-left coordinates
 			for card in self.pboxes[key].cards:
 				display_surface.blit(card.image, card.rect)
 			for itxt in range(len(self.pboxes[key].text)):
 				display_surface.blit(self.pboxes[key].text[itxt], self.pboxes[key].textloc[itxt])
+
+		
 
 		self.tbox.update(self.table)
 		s = pygame.Surface((self.tbox.coords[2],self.tbox.coords[3]))  # the size of your rect
@@ -161,7 +213,13 @@ class GameState():
 				print('Bet signal "%s" not recognised.'%bet)
 				sys.exit()
 
+		self.update_players()
+
 		return bet
+
+	def new_round(self):
+		self.iround = 0
+		self.table.new_round()
 
 	def next_round(self):
 		self.iround+=1
@@ -170,21 +228,26 @@ class GameState():
 		self.iround=0
 
 	def update_players(self):
-		self.inplayers =0
-		self.betplayers=0
+		self.betplayers =0
+		self.inplayers=0
+		self.playing=0
 		for plkey in self.players:
-			print(plkey)
+			#print(plkey)
 			if self.players[plkey].betting:
-				print(plkey, 'betting')
-				self.inplayers+=1
-			if not self.players[plkey].fold:
-				print(plkey, 'unfolded')
+				#print(plkey, 'betting')
 				self.betplayers+=1
+			if not self.players[plkey].fold and not self.players[plkey].out:
+				#print(plkey, 'unfolded')
+				self.inplayers+=1
+			if not self.players[plkey].out:
+				self.playing+=1
 		
 	def eliminate_players(self):
 		for plkey in self.players:
 			if self.players[plkey].bank==0:
 				self.players[plkey].eliminate()
+			else:
+				print(plkey, ' not eliminated.')
 
 		self.update_players()
 
@@ -195,13 +258,11 @@ class GameState():
 	def new_state(self, nstate):
 		self.state=nstate
 
-	def payout(self, win_inds):
-		payouts = self.table.payout(win_inds)
+	def payout(self, win_inds, tbreak):
+		payouts = self.table.payout(win_inds, tbreak, self.schip)
 		for plkey in self.players:
 			self.players[plkey].win(payouts[self.players[plkey].order])
-		
-
-
+		return payouts
 	"""
 	flop/turn/river
 	take the shuffled deck and deal flop/turn/river (updates poker table)
@@ -253,19 +314,19 @@ def ask(screen, font,font_color=(255,0,0), restrict='all', maxlen=20, prompt_str
 		# refresh the display
 		pygame.display.flip()
 
+
 def ask_bet(pgame,gstate,plyrkey):
 
-	mindiff=5
 	minimum = np.amax(gstate.table.roundvals) - gstate.table.roundvals[gstate.players[plyrkey].order]
 	maximum = gstate.players[plyrkey].bank
 
 	bet = minimum-10
 	if minimum<maximum:
-		while bet<minimum or bet>maximum or bet%mindiff!=0:
+		while bet<minimum or bet>maximum or bet%gstate.schip!=0:
 			print('Bet for %s'%plyrkey)
 			pgame.screen.fill(pgame.bg_color)
 			gstate.update_all(pgame.screen)
-			bet = ask(pgame.screen, pgame.fontObj, prompt_string = 'Bet (in multiples %s) between %d and %d: ' %(mindiff, minimum, maximum))
+			bet = ask(pgame.screen, pgame.fontObj, prompt_string = 'Bet (in multiples %s) between %d and %d: ' %(gstate.schip, minimum, maximum))
 			if bet=='f' or bet=='F':
 				break
 
@@ -293,29 +354,32 @@ def ask_bet(pgame,gstate,plyrkey):
 
 def std_round(pgame, gstate,  blind_round=False, display=None, fontObj=None):
 	RoundFlag=True
-
+	gstate.new_round()
 	bet=0
 	new_bet=0
 	current=0
+	bet_offset=0
 	round_val = np.amax(gstate.table.roundvals)
 	RoundRecord=[]
 	gstate.update_players()
-	if gstate.inplayers>1:
-		while RoundFlag and gstate.betplayers>1: 
+	if gstate.betplayers>1:
+		while RoundFlag and gstate.inplayers>1: 
 			print('Bet number: ', gstate.iround)
-			print('Players in: ', gstate.betplayers)
-
+			print('Players in: ', gstate.inplayers)
 			bet_round=False
 			for plkey in gstate.players:
-				if gstate.players[plkey].order==gstate.iround%gstate.nplayers and gstate.players[plkey].betting:
+				print(plkey, ': ', gstate.players[plkey].order, gstate.iround,gstate.playing, gstate.players[plkey].out)
+				print('betting - ', gstate.players[plkey].betting)
+
+				if gstate.players[plkey].order==gstate.iround%gstate.playing and not gstate.players[plkey].out and  gstate.players[plkey].betting:
+					gstate.players[plkey].start_turn()
+					pgame.blit_gstate(gstate)
 					plind = gstate.players[plkey].order
-					if gstate.players[plkey].ai != None:
-						print('AI player.')
 					if blind_round:
-						if gstate.iround==0:
+						if gstate.iround==0+bet_offset:
 							print('%s bets small blind: %d' %(plkey, gstate.blinds[0]))
 							new_bet=gstate.blinds[0]
-						elif gstate.iround==1:
+						elif gstate.iround==1+bet_offset:
 							print('%s bets big blind: %d' %(plkey, gstate.blinds[1]))
 							new_bet=gstate.blinds[1]
 					if (not blind_round) or (not (gstate.iround==1 or gstate.iround==0)):
@@ -331,6 +395,15 @@ def std_round(pgame, gstate,  blind_round=False, display=None, fontObj=None):
 					gstate.make_bet(plkey, new_bet)
 					bet_round=True
 					print('%s bets : '%plkey, new_bet, ' for a total of ', gstate.table.roundvals[plind], 'this round.')
+					gstate.players[plkey].end_turn()
+					pgame.blit_gstate(gstate)
+					break
+				elif gstate.players[plkey].order==gstate.iround%gstate.playing and not gstate.players[plkey].betting:
+					bet_offset+=1
+					bet_round=True
+					break
+
+					
 				#the last player to take aggressive action by a bet or raise is the first to show the hand
 				#hence we need a record of who has raised last in each round
 				if not gstate.players[plkey].fold:
@@ -338,8 +411,9 @@ def std_round(pgame, gstate,  blind_round=False, display=None, fontObj=None):
 				
 			
 			gstate.update_players()
-			gstate.next_round()
-			if gstate.iround>=gstate.nplayers and bet_round or gstate.inplayers==0:
+			if bet_round:
+				gstate.next_round()
+			if gstate.iround>=gstate.nplayers or gstate.betplayers==0:
 				RoundFlag=False
 				for plkey in gstate.players:
 					if gstate.players[plkey].betting and gstate.table.roundvals[gstate.players[plkey].order]!=round_val:
@@ -352,9 +426,12 @@ def std_round(pgame, gstate,  blind_round=False, display=None, fontObj=None):
 		bet=new_bet
 		new_bet='error'
 		#Define here current min bet size
-		print('Players remaining in this hand: ', gstate.betplayers, gstate.inplayers)
+		print('Players remaining unfolded: ', gstate.inplayers)
+		print('Players in game: ', gstate.betplayers)
 
 		gstate.add_record(RoundRecord)
+		
+		return None
 
 """
 showdown
@@ -369,25 +446,27 @@ def showdown(pgame, gstate, gtype=None):
 	playing_hands_name={}
 	playing_hands = {}
 	playing_values = {}
+	tiebreak_values = {}
 	max_hand_val =0
 	for plkey in gstate.players:
-		if not gstate.players[plkey].fold:
+		if not gstate.players[plkey].fold and not gstate.players[plkey].out:
 			tot_hand = gstate.players[plkey].hand + gstate.table.hand
 			playing_hands[plkey], playing_values[plkey] = hand.full_hand_best(tot_hand, 5)
+			tiebreak_values[plkey] = hand.tiebreaker(gstate.players[plkey].hand)
 			playing_hands_name[plkey] = hand.poker_hand(playing_hands[plkey])
 			
 	for plkey in playing_hands:
 		max_hand_val = max(max_hand_val, playing_values[plkey])
 
 	win_inds = []
+	tbreak_vals = []
 
 	for plkey in playing_hands:
 		if playing_values[plkey]==max_hand_val:
 			win_inds.append(gstate.players[plkey].order)
-
+			tbreak_vals.append(tiebreak_values[plkey])
 	
-	gstate.payout(win_inds)
-	payouts = gstate.table.payout(win_inds)
+	payouts = gstate.payout(win_inds, tbreak_vals)
 	
 	for ipay in range(len(payouts)):
 		for plkey in gstate.players:
@@ -404,23 +483,21 @@ def showdown(pgame, gstate, gtype=None):
 
 	sch = pgame.screen.get_rect().height
 	py_mid = sch/2
-	py = np.linspace(-0.3,0.3, gstate.inplayers)
+	py = np.linspace(-0.3,0.3, gstate.playing)
 
 	pgame.screen.fill((0,0,0))
 
 	ipy=0
 	for plkey in gstate.players:
-		if gstate.players[plkey].betting:
+		if not gstate.players[plkey].out:
 			if plkey in playing_hands_name:
 				hand_name = playing_hands_name[plkey]
 			else:
 				hand_name = 'fold'
-			win_text= pgame.fontObj.render("Player {0.ID} ({1}): {2}".format(gstate.players[plkey], playing_hands_name[plkey],payouts[gstate.players[plkey].order] ), 1, (255,0,0))
+			win_text= pgame.fontObj.render("Player {0.ID} ({1}): {2}".format(gstate.players[plkey], hand_name,payouts[gstate.players[plkey].order] ), 1, (255,0,0))
 			win_rect = win_text.get_rect()
 			win_rect.center = (px, py_mid+py[ipy]*sch)
-			print(win_rect.center, px, sch)
 			pgame.screen.blit(win_text, win_rect)
-			print('Blitting: ', plkey)
 			ipy+=1
 			
 	pygame.display.flip()
@@ -430,12 +507,14 @@ def showdown(pgame, gstate, gtype=None):
 	for plkey in gstate.players:
 		new_tot+=gstate.players[plkey].bank
 
-	if new_tot!=400*gstate.nplayers:
-		print('Bank discrepancy')
-		sys.exit()
-
-
-	print(playing_hands)
+	print('________________\nShowdown Summary:')
+	print('Playing hands:')
+	for plkey in playing_hands:
+		print(plkey, ': ', playing_hands[plkey])
+	
+	print('\nTotal in bank: ', new_tot)
+	print('\nPayouts: ', payouts)
+	print('________________')
 	return None
 
 
@@ -523,7 +602,7 @@ class PokerGame():
 			item.set_font_color(WHITE)
 			item.set_italic(False)
 
-	def run(self, state, nplayers,chips0, blinds, gstate=None):
+	def run(self, state, nplayers,chips0, blinds, mindiff, gstate=None):
 		mainloop = True
 		prev_state=-1
 		while mainloop:
@@ -532,33 +611,61 @@ class PokerGame():
 			#State=1 --> deal
 			#State=2 --> play, blind
 			update_flag=False
-			
+
+			if gstate!=None:
+				ROUND_TOT=0
+				for plkey in gstate.players:
+					ROUND_TOT+=gstate.players[plkey].bank
+				ROUND_TOT+=gstate.table.pot
+
+				ROUND_TOT=copy.copy(ROUND_TOT)
 			if state==0 or gstate==None:
 				rect_list = []
 				#Assign players to list
-				gstate = GameState(self.scr_width, self.scr_height, nplayers,chips0, blinds, self.fontObj)
+				gstate = GameState(self.scr_width, self.scr_height, nplayers,chips0, blinds, mindiff, self.fontObj)
 				state=1
 			elif gstate.state==1:
-				gstate.move_dealer(gstate.dealer+1)
+
+				gstate.move_dealer()
 				#self.screen.blit(mbg, (CENTER[0]-SCW/2,CENTER[1]-SCH/2))
 				gstate.new_hand()
+				
+				ROUND_TOT=0
+				for plkey in gstate.players:
+					print('Round calc: ' , plkey, gstate.players[plkey].bank)
+					ROUND_TOT+=gstate.players[plkey].bank
+				ROUND_TOT+=gstate.table.pot
+
+				ROUND_TOT=copy.copy(ROUND_TOT)
+				print('1ROUND_TOT:', ROUND_TOT)
 			elif gstate.state==2:
 				std_round(self, gstate, blind_round=True, display = self.screen)
 				gstate.new_state(3)
+				print('2ROUND_TOT:', ROUND_TOT)
 			elif gstate.state==3:
 				gstate.flop()
 				std_round(self, gstate, blind_round=False, display = self.screen)
 				gstate.new_state(4)
+				print('3ROUND_TOT:', ROUND_TOT)
 			elif gstate.state==4:
 				gstate.turn()
 				std_round(self, gstate, blind_round=False, display = self.screen)
 				gstate.new_state(5)
+				print('4ROUND_TOT:', ROUND_TOT)
 			elif gstate.state==5:
 				gstate.river()
 				std_round(self, gstate, blind_round=False, display = self.screen)
 				showdown(self, gstate)
 				gstate.eliminate_players()
-				if gstate.inplayers>1:
+				gstate.update_players()
+				ROUND_TOT_NEW=0
+				for plkey in gstate.players:
+					ROUND_TOT_NEW+=gstate.players[plkey].bank
+				if ROUND_TOT!=ROUND_TOT_NEW:
+					print('Error: chip bank discrepancy.')
+					print('Opened with %d, closed with %d'%(ROUND_TOT,ROUND_TOT_NEW))
+					sys.exit()
+				if gstate.playing>1:
 					gstate.new_state(1)
 				else:
 					gstate.new_state(6)
@@ -608,11 +715,15 @@ class PokerGame():
 
 			if update_flag:
 				# Redraw the background
-				self.screen.fill(self.bg_color)
-				gstate.update_all(self.screen)
-
+				self.blit_gstate(gstate)
 			
 			pygame.display.flip()
+
+	def blit_gstate(self, gstate):
+		self.screen.fill(self.bg_color)
+		gstate.update_all(self.screen)
+
+		pygame.display.flip()
  
 if __name__ == "__main__":
     def hello_world():

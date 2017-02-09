@@ -96,7 +96,9 @@ class player_box(object):
 		self.text =[self.font.render("Player: {0.ID}".format(player), 1, (0,0,0)),self.font.render("Chips: {0.bank}".format(player), 1, (0,0,0))]
 		self.cards=[]
 		for icard in range(len(player.hand)):
-			position = (int(self.cardpos[icard][0]+self.coords[0]), int(self.cardpos[icard][1]+self.coords[1]))
+			px = self.cardpos[icard][0]
+			py = self.cardpos[icard][1]
+			position = (int(px+self.coords[0]), int(py+self.coords[1]))
 			self.cards.append(table_card(player.hand[icard], position, self.csize, player.show))
 
 		
@@ -145,13 +147,27 @@ class dealer_box(object):
 			position = (int(self.cardpos[icard][0]+self.coords[0]), int(self.cardpos[icard][1]+self.coords[1]))
 			self.cards.append(table_card(table.hand[icard], position, self.csize, True))
 
+
+class DealerButton(pygame.sprite.Sprite):
+	def __init__(self, positions, ID, dims):
+		pygame.sprite.Sprite.__init__(self)
+		self.positions[
+		self.image, self.rect = load.load_img('dealer_button.jpg')
+		self.image = pygame.transform.scale(self.image, dims)
+		self.rect = self.image.get_rect()
+		self.rect.center = self.positions[ID]
+
+	def move_button(self, ID):
+		self.rect.center = self.positions[ID]
+	
+
 """
 position_boxes:
 In: screen width, screen height, no. cards per player, no. dealing cards, aiplayers, humanplayers, font
 Out: card dimension (tuple), human player cards positions (list of tuples),
 AI player cards positions (list of lists of tuples)
 """
-def position_boxes(scw, sch, cardspp, dcards, aiplayers, humanplayers, font):
+def position_boxes(scw, sch, cardspp, dcards, aiplayers, humanplayers, font, dealID):
 	nplayers = len(aiplayers)+len(humanplayers)
 	nhumans = len(humanplayers)
 
@@ -162,24 +178,32 @@ def position_boxes(scw, sch, cardspp, dcards, aiplayers, humanplayers, font):
 	boxdims = (scale, 0.25)
 	left0ai = 0.5-boxdims[0]*(1.+(nplayers-nhumans-1))/2.
 	left0h = 0.5-boxdims[0]*(1.+nhumans-1)/2.
+	button_dim = 0.05
+	button_array = []
 	AIy = margin
-	for ibox in range(nplayers-nhumans):
-		AIx = boxdims[0]*ibox+margin/2.+left0ai
-		dims = (AIx*scw, AIy*sch,boxdims[0]*scw, boxdims[1]*sch)
-		AI_boxes.append(player_box(font, dims, aiplayers[ibox], cardspp))
-	
 
 	Hy = 1.-boxdims[1]-margin
 	for ibox in range(nhumans):
-		Hx = boxdims[0]*ibox +margin/2. +left0h
+		Hx = 1.05(boxdims[0]*ibox) +margin/2. +left0h
 		dims = (Hx*scw, Hy*sch,boxdims[0]*scw, boxdims[1]*sch)
 		player_boxes.append(player_box(font, dims, humanplayers[ibox], cardspp))
 		csize = player_boxes[ibox].csize
+		button_array.append((Hx*scw,(Hy+0.05*boxdims[1])*sch))
+
+	for ibox in range(nplayers-nhumans):
+		AIx = 1.05*(boxdims[0]*ibox)+margin/2.+left0ai
+		dims = (AIx*scw, AIy*sch,boxdims[0]*scw, boxdims[1]*sch)
+		AI_boxes.append(player_box(font, dims, aiplayers[ibox], cardspp))
+
+		button_array.append((AIx*scw,(AIy+0.95*boxdims[1])*sch))
+	
 
 	deal_dims = (0.25*scw, 3.*sch/8., 0.5*scw, 0.25*sch)
 
 	dealerbox = dealer_box(font, deal_dims, dcards, csize)
 
-	return player_boxes, AI_boxes, dealerbox
+	button = DealerButton(button_array, dealID, (button_dim, button_dim)):
+
+	return player_boxes, AI_boxes, dealerbox, button
 
 
