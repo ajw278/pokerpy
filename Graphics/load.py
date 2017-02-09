@@ -15,10 +15,12 @@ import os
 import sys
 import pygame
 
+scriptpath = os.path.dirname(os.path.realpath(__file__))
+
 
 def load_img(name):
 	""" Load image and return image object"""
-	fullname = os.path.join('graphic_data', name)
+	fullname = os.path.join(scriptpath+'/graphic_data', name)
 	try:
 		image = pygame.image.load(fullname)
 		if image.get_alpha() is None:

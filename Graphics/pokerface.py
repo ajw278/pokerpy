@@ -29,9 +29,10 @@ from pygame.locals import *
 from collections import namedtuple
 
 import sys
-sys.path.insert(0, '../Odds/')
-sys.path.insert(0, '../')
-sys.path.insert(0, '../Objects/')
+scriptpath = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, scriptpath+'/../Odds/')
+sys.path.insert(0, scriptpath+'/../Objects/')
+sys.path.insert(0, scriptpath+'/../Data/')
 import gameplay
 import im_objects
 import hand
@@ -62,7 +63,7 @@ EVENT_CHANGE_STATE = pygame.USEREVENT + 1
 
 
 def textobj(message, size, position):
-	fontObj = pygame.font.Font('./Fonts/Alien_League.ttf', size)
+	fontObj = pygame.font.Font(scriptpath+'/Fonts/Alien_League.ttf', size)
 	textObj = fontObj.render(message, 1, DARKERGREEN)
 	textRect = textObj.get_rect()
 	textRect.midtop = position
@@ -115,11 +116,11 @@ def main():
 	MIDTEXT = SCH/25
 	LARGETEXT = SCH/15
 	MASSIVETEXT = SCH/8
-	titlefontObj = pygame.font.Font('./Fonts/Alien_League.ttf', LARGETEXT)
-	levelfontObj = pygame.font.Font('./Fonts/Alien_League.ttf', MIDTEXT)
-	textfontObj = pygame.font.Font('./Fonts/Alien_League.ttf', SMALLTEXT)
+	titlefontObj = pygame.font.Font(scriptpath+'/Fonts/Alien_League.ttf', LARGETEXT)
+	levelfontObj = pygame.font.Font(scriptpath+'/Fonts/Alien_League.ttf', MIDTEXT)
+	textfontObj = pygame.font.Font(scriptpath+'/Fonts/Alien_League.ttf', SMALLTEXT)
 
-	mbg = pygame.image.load("./graphic_data/MainBG.jpg")
+	mbg = pygame.image.load(scriptpath+"/graphic_data/MainBG.jpg")
 	mbg = pygame.transform.scale(mbg, (SCW, SCH))
 
 	
@@ -158,7 +159,7 @@ def main():
 		if GAMESTATE == 'menu':
 			menu_items = ('Start', 'Quit')
 			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
-				font='./Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN)
+				font=scriptpath+'/Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN)
 			selection = gm.run()
 			if selection==menu_items[0]:
 				GAMESTATE='gamesetup'
@@ -167,7 +168,7 @@ def main():
 		elif GAMESTATE=='gamesetup':
 			menu_items = ('Play', 'Number Players', 'Starting Bank', 'Quit')
 			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
-				font='./Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN)
+				font=scriptpath+'/Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN)
 			selection = gm.run()
 			if selection==menu_items[0]:
 				GAMESTATE='play'
@@ -185,7 +186,7 @@ def main():
 		elif GAMESTATE == 'pausemenu':
 			menu_items = ('Resume', 'Main Menu', 'Quit')
 			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
-				font='./Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN,
+				font=scriptpath+'/Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN,
 				bg_alpha=100)
 			selection = gm.run()
 			if selection==menu_items[0]:
