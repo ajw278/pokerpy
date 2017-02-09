@@ -53,11 +53,64 @@ letter_chars ='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 
 
-def GameGraphics():
-	def __init__(self, screen, fontObj):
-		self.screen = screen
+class GameGraphics():
+	def __init__(self, gstate, ai_players, hum_players, fontObj):
+		self.screen = gstate.screen
 		self.scr_rect = self.screen.get_rect()
-		player_boxes, AI_boxes, dealer_box, deal_button = im_objects.position_boxes(self.scr_rect.width, self.scr_rect.height, 2, 5, ai_players, hum_players, fontObj, dealer)
+		player_boxes, AI_boxes, dealer_box, deal_button = im_objects.position_boxes(self.scr_rect.width, self.scr_rect.height, 2, 5, ai_players, hum_players, fontObj, gstate.dealer)
+		
+		box_dict = {}
+		iplyr=0
+		for hplyr in hum_players:
+			box_dict[hplyr.ID] = player_boxes[iplyr]
+			iplyr+=1
+
+		iplyr=0
+		for hplyr in ai_players:
+			box_dict[hplyr.ID] = AI_boxes[iplyr]
+			iplyr+=1
+		
+		self.tbox = dealer_box
+		self.pboxes = box_dict
+		self.button = deal_button
+
+	def update_all(self, gstate):
+		for key in gstate.players:
+			self.pboxes[key].update(gstate.players[key])
+			s = pygame.Surface((self.pboxes[key].coords[2],self.pboxes[key].coords[3]))  # the size of your rect
+			s.set_alpha(100)                # alpha level
+			if not gstate.players[key].turn:
+				s.fill((0,0,0)) 
+			else:
+				s.fill((255,0,0))
+			self.screen.blit(s, (self.pboxes[key].coords[0],self.pboxes[key].coords[1]))    # (0,0) are the top-left coordinates
+			for card in self.pboxes[key].cards:
+				self.screen.blit(card.image, card.rect)
+			for itxt in range(len(self.pboxes[key].text)):
+				self.screen.blit(self.pboxes[key].text[itxt], self.pboxes[key].textloc[itxt])
+
+		
+
+		self.tbox.update(gstate.table)
+		s = pygame.Surface((self.tbox.coords[2],self.tbox.coords[3]))  # the size of your rect
+		s.set_alpha(100)                # alpha level
+		s.fill((0,0,0))           # this fills the entire surface
+		self.screen.blit(s, (self.tbox.coords[0],self.tbox.coords[1]))    # (0,0) are the top-left coordinates
+
+		for card in self.tbox.cards:
+			self.screen.blit(card.image, card.rect)
+		for itxt in range(len(self.tbox.text)):
+			self.screen.blit(self.tbox.text[itxt], self.tbox.textloc[itxt])
+
+		self.button.move_button(gstate.dealer)
+		self.screen.blit(self.button.image, self.button.rect)
+
+		print('Dealer: ', gstate.dealer)
+		print('Order:')
+		for plkey in gstate.players:
+			print(plkey, ': ', gstate.players[plkey].order)
+
+		return None
 
 
 """
@@ -72,6 +125,7 @@ class GameState():
 	def __init__(self, nplayers,chips0,blinds, mindiff, fontObj=None, dealer=None, screen=None):
 		hum_players = []
 		ai_players = []
+		self.playing=0
 		if dealer==None:
 			self.dealer = random.randint(0, nplayers-1)
 		else:
@@ -83,28 +137,26 @@ class GameState():
 			else:
 				ai_players.append(player.player(chips0, iplayer, 'basic'))
 		state=1
-		table_data = table.poker_table(nplayers)
-
 		#Need to associate players with their boxes - not all that important but done a little haphazardly..
 		player_dict = {}
-		box_dict = {}
 		iplyr=0
 		for hplyr in hum_players:
 			player_dict[hplyr.ID] = hplyr
-			box_dict[hplyr.ID] = player_boxes[iplyr]
 			iplyr+=1
 
 		iplyr=0
 		for hplyr in ai_players:
 			player_dict[hplyr.ID] = hplyr
-			box_dict[hplyr.ID] = AI_boxes[iplyr]
 			iplyr+=1
-		#Define the initial dealer
-		self.blinds = blinds
-		self.table = table_data
-		self.tbox = dealer_box
+		
 		self.players = player_dict
-		self.pboxes = box_dict
+		self.screen =screen		
+		if self.screen!=None:
+			self.graphics = GameGraphics(self, ai_players, hum_players, fontObj)
+		else:
+			self.graphics = None
+
+		self.blinds = blinds
 		self.schip = mindiff
 		self.state=1
 		self.deck = pokerpy.init_deck()
@@ -119,10 +171,11 @@ class GameState():
 		for plkey in self.players:
 			if not self.players[plkey].fold and not self.players[plkey].out:
 				self.inplayers+=1
-		self.playing=0
 		for plkey in self.players:
 			if not self.players[plkey].out:
 				self.playing+=1
+
+		self.table = table.poker_table(self)
 
 	def move_dealer(self):
 		NoDealer = True
@@ -148,42 +201,11 @@ class GameState():
 		self.update_players()
 		self.roundorder=[]
 		self.deck = pokerpy.init_deck()
-		self.table.new_hand()
+		self.table.new_hand(self)
 		cardset, self.deck = pokerpy.init_deal(self.deck, self.playing)
 		pokerpy.assign_hand(self.dealer, self.players, cardset)
 		self.state=2
 		self.iround=0
-
-	
-	def update_all(self, display_surface):
-		for key in self.players:
-			self.pboxes[key].update(self.players[key])
-			s = pygame.Surface((self.pboxes[key].coords[2],self.pboxes[key].coords[3]))  # the size of your rect
-			s.set_alpha(100)                # alpha level
-			if not self.players[key].turn:
-				s.fill((0,0,0)) 
-			else:
-				s.fill((255,0,0))
-			display_surface.blit(s, (self.pboxes[key].coords[0],self.pboxes[key].coords[1]))    # (0,0) are the top-left coordinates
-			for card in self.pboxes[key].cards:
-				display_surface.blit(card.image, card.rect)
-			for itxt in range(len(self.pboxes[key].text)):
-				display_surface.blit(self.pboxes[key].text[itxt], self.pboxes[key].textloc[itxt])
-
-		
-
-		self.tbox.update(self.table)
-		s = pygame.Surface((self.tbox.coords[2],self.tbox.coords[3]))  # the size of your rect
-		s.set_alpha(100)                # alpha level
-		s.fill((0,0,0))           # this fills the entire surface
-		display_surface.blit(s, (self.tbox.coords[0],self.tbox.coords[1]))    # (0,0) are the top-left coordinates
-
-		for card in self.tbox.cards:
-			display_surface.blit(card.image, card.rect)
-		for itxt in range(len(self.tbox.text)):
-			display_surface.blit(self.tbox.text[itxt], self.tbox.textloc[itxt])
-
-		return None
 
 	
 	def make_bet(self,plkey, bet):
@@ -219,7 +241,7 @@ class GameState():
 
 	def new_round(self):
 		self.iround = 0
-		self.table.new_round()
+		self.table.new_round(self)
 
 	def next_round(self):
 		self.iround+=1
@@ -261,7 +283,8 @@ class GameState():
 	def payout(self, win_inds, tbreak):
 		payouts = self.table.payout(win_inds, tbreak, self.schip)
 		for plkey in self.players:
-			self.players[plkey].win(payouts[self.players[plkey].order])
+			if not self.players[plkey].out:
+				self.players[plkey].win(payouts[self.players[plkey].order])
 		return payouts
 	"""
 	flop/turn/river
@@ -280,6 +303,11 @@ class GameState():
 	def river(self):
 		river_cards, self.deck = pokerpy.deal(self.deck, 1, burn=True)
 		self.table.deal(river_cards)
+
+	def show_hands(self):
+		for plkey in self.players:
+			if self.players[plkey].betting:
+				self.players[plkey].show_hand()
 
 
 def dummy_func(*args):
@@ -325,7 +353,7 @@ def ask_bet(pgame,gstate,plyrkey):
 		while bet<minimum or bet>maximum or bet%gstate.schip!=0:
 			print('Bet for %s'%plyrkey)
 			pgame.screen.fill(pgame.bg_color)
-			gstate.update_all(pgame.screen)
+			gstate.graphics.update_all(gstate)
 			bet = ask(pgame.screen, pgame.fontObj, prompt_string = 'Bet (in multiples %s) between %d and %d: ' %(gstate.schip, minimum, maximum))
 			if bet=='f' or bet=='F':
 				break
@@ -442,6 +470,9 @@ In: Players, table, betting order (not used atm, for the reveal if needed)
 def showdown(pgame, gstate, gtype=None):
 	if gtype=='manual':
 		get_final_hands(deck, players, dealer)
+
+	gstate.show_hands()
+	pgame.blit_gstate(gstate)
 	
 	playing_hands_name={}
 	playing_hands = {}
@@ -477,7 +508,8 @@ def showdown(pgame, gstate, gtype=None):
 				if plkey in playing_hands:
 					print('Best type: ', playing_hands_name[plkey])
 					print('Best hand: ', playing_hands[plkey])
-		
+	
+	time.sleep(5)
 	
 	px = pgame.screen.get_rect().width/2
 
@@ -622,7 +654,7 @@ class PokerGame():
 			if state==0 or gstate==None:
 				rect_list = []
 				#Assign players to list
-				gstate = GameState(self.scr_width, self.scr_height, nplayers,chips0, blinds, mindiff, self.fontObj)
+				gstate = GameState(nplayers,chips0, blinds, mindiff, fontObj=self.fontObj, screen=self.screen)
 				state=1
 			elif gstate.state==1:
 
@@ -721,7 +753,7 @@ class PokerGame():
 
 	def blit_gstate(self, gstate):
 		self.screen.fill(self.bg_color)
-		gstate.update_all(self.screen)
+		gstate.graphics.update_all(gstate)
 
 		pygame.display.flip()
  

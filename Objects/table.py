@@ -23,21 +23,21 @@ class poker_table
 Not sure about how to divide up pot properly - check!
 """
 class poker_table:
-	def __init__(self, nplayers):
+	def __init__(self, gstate):
 		self.hand = []
-		self.nplayers = nplayers
+		self.nplayers = gstate.playing
 		self.pot = 0
-		self.invals = np.zeros(nplayers, dtype=int)
-		self.roundvals = np.zeros(nplayers, dtype=int)
-
-	def new_hand(self):
-		self.pot = 0
-		self.hand=[]
 		self.invals = np.zeros(self.nplayers, dtype=int)
 		self.roundvals = np.zeros(self.nplayers, dtype=int)
 
-	def new_round(self):
-		self.roundvals = np.zeros(self.nplayers, dtype=int)
+	def new_hand(self, gstate):
+		self.pot = 0
+		self.hand=[]
+		self.invals = np.zeros(gstate.playing, dtype=int)
+		self.roundvals = np.zeros(gstate.playing, dtype=int)
+
+	def new_round(self, gstate):
+		self.roundvals = np.zeros(gstate.playing, dtype=int)
 	
 	def bid(self,value, player_order):
 		self.roundvals[player_order] += value

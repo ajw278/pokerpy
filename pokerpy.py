@@ -190,10 +190,12 @@ def assign_hand(dealer, players, hands):
 		for plyr_key in players:
 			if players[plyr_key].ID==ID:
 				oorder = iID
-				players[plyr_key].new_round((oorder+dealer)%nplayers)
+				players[plyr_key].new_round((oorder-(dealer+1))%nplayers)
 				for hand_no in hands_all:
 					if players[plyr_key].order==hand_no:
 						players[plyr_key].deal_cards(hands[hand_no])
+			if players[plyr_key].out:
+				players[plyr_key].new_round(None)
 	
 		
 		iID+=1

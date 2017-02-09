@@ -151,7 +151,7 @@ class dealer_box(object):
 class DealerButton(pygame.sprite.Sprite):
 	def __init__(self, positions, ID, dims):
 		pygame.sprite.Sprite.__init__(self)
-		self.positions[
+		self.positions = positions
 		self.image, self.rect = load.load_img('dealer_button.jpg')
 		self.image = pygame.transform.scale(self.image, dims)
 		self.rect = self.image.get_rect()
@@ -178,13 +178,13 @@ def position_boxes(scw, sch, cardspp, dcards, aiplayers, humanplayers, font, dea
 	boxdims = (scale, 0.25)
 	left0ai = 0.5-boxdims[0]*(1.+(nplayers-nhumans-1))/2.
 	left0h = 0.5-boxdims[0]*(1.+nhumans-1)/2.
-	button_dim = 0.05
+	button_dim = (int(0.05*sch),int(0.05*sch))
 	button_array = []
 	AIy = margin
 
 	Hy = 1.-boxdims[1]-margin
 	for ibox in range(nhumans):
-		Hx = 1.05(boxdims[0]*ibox) +margin/2. +left0h
+		Hx = 1.05*(boxdims[0]*ibox) +margin/2. +left0h
 		dims = (Hx*scw, Hy*sch,boxdims[0]*scw, boxdims[1]*sch)
 		player_boxes.append(player_box(font, dims, humanplayers[ibox], cardspp))
 		csize = player_boxes[ibox].csize
@@ -202,7 +202,8 @@ def position_boxes(scw, sch, cardspp, dcards, aiplayers, humanplayers, font, dea
 
 	dealerbox = dealer_box(font, deal_dims, dcards, csize)
 
-	button = DealerButton(button_array, dealID, (button_dim, button_dim)):
+	button = DealerButton(button_array, dealID,button_dim)
+
 
 	return player_boxes, AI_boxes, dealerbox, button
 
