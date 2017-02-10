@@ -2,21 +2,6 @@
 
 """
 Notes:
-- Not sure the right nplayers being used - need to check when players are knocked out
-- A lot of errors regarding who is out, who is allowed to bet and pot division
-- Convention re. players that are out:
---> Need to continue to add 1 to the dealer->base dealer on last ID
-e.g. 0(1) 1(2) 2(3) 3(0), 2 dealer, 3 eliminated --> 0(3) 1(0) 2(1) 3(2), 0 dealer
-Routine should look like this:
-	NoDealer = True
-	while NoDealer:
-		dealer+=1
-		for plkey in gstate.players:
-			if gstate.players[plkey].ID==dealer and not gstate.players[plkey].out:
-				NoDealer=False
-
-but now its cleaner to go without the extra order:
-3 eliminated --> 0(2) 1(0) 2(1) 3(_) 0 dealer
 """
 from __future__ import print_function
 
@@ -115,11 +100,6 @@ class GameGraphics():
 
 """
 class, GameState
-If I was doing this properly there should be a class which holds
-all the game state data and a class which contains that class plus
-all the graphical data. Probably won't be too hard to correct later.
-For the time being, this holds the game state for the graphical version,
-including graphical data
 """
 class GameState():
 	def __init__(self, nplayers,chips0,blinds, mindiff, fontObj=None, dealer=None, screen=None):
@@ -148,9 +128,13 @@ class GameState():
 		for hplyr in ai_players:
 			player_dict[hplyr.ID] = hplyr
 			iplyr+=1
-		
+		self.aips = ai_players
+		self.hps = hum_players
 		self.players = player_dict
-		self.screen =screen		
+		self.screen =screen
+		self.aips = ai_players
+		self.hps = hum_players
+		self.fontObj = fontObj
 		if self.screen!=None:
 			self.graphics = GameGraphics(self, ai_players, hum_players, fontObj)
 		else:
@@ -309,15 +293,60 @@ class GameState():
 			if self.players[plkey].betting:
 				self.players[plkey].show_hand()
 
+	def copy_game(self, gstate, screen=None):
+		
+		self.playing=gstate.playing
+		self.dealer = gstate.dealer
+		self.players = gstate.players
+		self.screen =screen
+		self.aips = gstate.aips
+		self.hps = gstate.hps
+		self.hps = gstate.hps	
+		self.blinds = gstate.blinds
+		self.schip = gstate.schip
+		self.state= gstate.state
+		self.deck = gstate.deck
+		self.betplayers = gstate.betplayers
+		self.nplayers = len(self.players)
+		self.iround = gstate.iround
+		self.roundorder = gstate.roundorder
+		for plkey in self.players:
+			if self.players[plkey].betting:
+				self.betplayers+=1
+		self.inplayers =0
+		for plkey in self.players:
+			if not self.players[plkey].fold and not self.players[plkey].out:
+				self.inplayers+=1
+		for plkey in self.players:
+			if not self.players[plkey].out:
+				self.playing+=1
+
+		self.table = gstate.table
+		self.update_players()
+		
+		if self.screen!=None:
+			self.graphics = GameGraphics(self, self.aips, self.hps, self.fontObj)
+		else:
+			self.graphics = None
+
+		if self.graphics!=None:
+			self.graphics.update_all(self)
+
 
 def dummy_func(*args):
 	print('Not implemented yet.')
 	sys.exit()
 
-def ask(screen, font,font_color=(255,0,0), restrict='all', maxlen=20, prompt_string='Enter: '):
+class DummyOptions():
+	def __init__(self):
+		self.items = []
+
+def ask(screen, font,font_color=(255,0,0), restrict='all', maxlen=20, prompt_string='Enter: ', pgame=None):
 
 	scw = screen.get_rect().width
 	sch = screen.get_rect().height
+	options = DummyOptions()
+	
 	txtbx = entry.Input(maxlength=maxlen, color=font_color, x=int(float(scw)/2.), y=int(0.35*float(sch)), font=font, prompt=prompt_string)
 	while True:
 		# events for txtbx
@@ -338,8 +367,11 @@ def ask(screen, font,font_color=(255,0,0), restrict='all', maxlen=20, prompt_str
 		txtbx.update(events)
 		# blit txtbx on the sceen
 		txtbx.draw(screen)
+		if not pgame==None:
+			ret_val = pgame.tick(options, events=events)
+			if ret_val!=None:
+				return ['exit', ret_val]
 		
-		# refresh the display
 		pygame.display.flip()
 
 
@@ -354,9 +386,12 @@ def ask_bet(pgame,gstate,plyrkey):
 			print('Bet for %s'%plyrkey)
 			pgame.screen.fill(pgame.bg_color)
 			gstate.graphics.update_all(gstate)
-			bet = ask(pgame.screen, pgame.fontObj, prompt_string = 'Bet (in multiples %s) between %d and %d: ' %(gstate.schip, minimum, maximum))
+			bet = ask(pgame.screen, pgame.fontObj, prompt_string = 'Bet (in multiples %s) between %d and %d: ' %(gstate.schip, minimum, maximum), pgame=pgame)
 			if bet=='f' or bet=='F':
 				break
+			elif type(bet)==list:
+				bet[0]='exit'
+				return bet[1]
 
 			try:
 				bet = int(bet)
@@ -367,7 +402,7 @@ def ask_bet(pgame,gstate,plyrkey):
 				bet=minimum-10
 	else:
 		while bet!=maximum and bet!='f' and bet!='F':
-			bet = ask(pgame.screen, pgame.fontObj, prompt_string = 'Would you like to go all in for %d (type "%d"): '%(maximum, maximum))
+			bet = ask(pgame.screen, pgame.fontObj, prompt_string = 'Would you like to go all in for %d (type "%d"): '%(maximum, maximum), pgame=pgame)
 			if bet=='f' or bet=='F':
 				break
 
@@ -382,7 +417,6 @@ def ask_bet(pgame,gstate,plyrkey):
 
 def std_round(pgame, gstate,  blind_round=False, display=None, fontObj=None):
 	RoundFlag=True
-	gstate.new_round()
 	bet=0
 	new_bet=0
 	current=0
@@ -414,6 +448,8 @@ def std_round(pgame, gstate,  blind_round=False, display=None, fontObj=None):
 						if gstate.players[plkey].ai == None:
 							if display!=None:
 								new_bet = ask_bet(pgame, gstate,plkey)
+								if type(new_bet)==str and new_bet not in ['f','F']:
+									return new_bet
 							else:
 								new_bet = dummy_func(gstate.players,plkey,gstate.table)
 						else:
@@ -589,42 +625,47 @@ class PokerGame():
 		self.mouse_is_visible = True
 		self.cur_item = None
  
-	def set_mouse_visibility(self):
-		if self.mouse_is_visible:
+	def set_mouse_visibility(self, optObj=None):
+		if optObj==None:
+			optObj=self
+		if optObj.mouse_is_visible:
 			pygame.mouse.set_visible(True)
 		else:
 			pygame.mouse.set_visible(False)
 
-	def set_keyboard_selection(self, key):
-		for item in self.items:
-			# Return all to neutral
-			item.set_italic(False)
-			item.set_font_color(WHITE)
+	def set_keyboard_selection(self, key, optObj=None):
+		if optObj==None:
+			optObj = self
+		if len(optObj.items)>0:
+			for item in optObj.items:
+				# Return all to neutral
+				item.set_italic(False)
+				item.set_font_color(WHITE)
 
-		if self.cur_item is None:
-			self.cur_item = 0
-		else:
-			# Find the chosen item
-			if key == pygame.K_UP and \
-			self.cur_item > 0:
-				self.cur_item -= 1
-			elif key == pygame.K_UP and \
-			self.cur_item == 0:
-				self.cur_item = len(self.items) - 1
-			elif key == pygame.K_DOWN and \
-			self.cur_item < len(self.items) - 1:
-				self.cur_item += 1
-			elif key == pygame.K_DOWN and \
-			self.cur_item == len(self.items) - 1:
-				self.cur_item = 0
+			if obtObj.cur_item is None:
+				optObj.cur_item = 0
+			else:
+				# Find the chosen item
+				if key == pygame.K_UP and \
+				optObj.cur_item > 0:
+					optObj.cur_item -= 1
+				elif key == pygame.K_UP and \
+				optObj.cur_item == 0:
+					optObj.cur_item = len(optObj.items) - 1
+				elif key == pygame.K_DOWN and \
+				optObj.cur_item < len(optObj.items) - 1:
+					optObj.cur_item += 1
+				elif key == pygame.K_DOWN and \
+				optObj.cur_item == len(optObj.items) - 1:
+					optObj.cur_item = 0
 
-		self.items[self.cur_item].set_italic(True)
-		self.items[self.cur_item].set_font_color(RED)
+			optObj.items[optObj.cur_item].set_italic(True)
+			optObj.items[optObj.cur_item].set_font_color(RED)
 
-		# Finally check if Enter or Space is pressed
-		if key == pygame.K_SPACE or key == pygame.K_RETURN:
-			text = self.items[self.cur_item].text
-			return text
+			# Finally check if Enter or Space is pressed
+			if key == pygame.K_SPACE or key == pygame.K_RETURN:
+				text = optObj.items[optObj.cur_item].text
+				return text
  
 	def set_mouse_selection(self, item, mpos):
 		if item.is_mouse_selection(mpos):
@@ -637,12 +678,19 @@ class PokerGame():
 	def run(self, state, nplayers,chips0, blinds, mindiff, gstate=None):
 		mainloop = True
 		prev_state=-1
+
+		if gstate!=None:
+			gstate_new = GameState(gstate.nplayers,chips0, gstate.blinds, gstate.schip, fontObj=self.fontObj, screen=self.screen)
+			gstate_new.copy_game(gstate, screen=self.screen)
+			gstate = copy.copy(gstate_new)
+
 		while mainloop:
 
 			#State=0 --> init game
 			#State=1 --> deal
 			#State=2 --> play, blind
 			update_flag=False
+			ret_val=None
 
 			if gstate!=None:
 				ROUND_TOT=0
@@ -664,43 +712,46 @@ class PokerGame():
 				
 				ROUND_TOT=0
 				for plkey in gstate.players:
-					print('Round calc: ' , plkey, gstate.players[plkey].bank)
+					print('Bank {0}: {1}'.format(plkey, gstate.players[plkey].bank))
 					ROUND_TOT+=gstate.players[plkey].bank
 				ROUND_TOT+=gstate.table.pot
 
 				ROUND_TOT=copy.copy(ROUND_TOT)
-				print('1ROUND_TOT:', ROUND_TOT)
 			elif gstate.state==2:
-				std_round(self, gstate, blind_round=True, display = self.screen)
-				gstate.new_state(3)
-				print('2ROUND_TOT:', ROUND_TOT)
+				ret_val = std_round(self, gstate, blind_round=True, display = self.screen)
+				if ret_val==None:
+					gstate.new_round()
+					gstate.new_state(3)
+					gstate.flop()
 			elif gstate.state==3:
-				gstate.flop()
-				std_round(self, gstate, blind_round=False, display = self.screen)
-				gstate.new_state(4)
-				print('3ROUND_TOT:', ROUND_TOT)
+				ret_val =std_round(self, gstate, blind_round=False, display = self.screen)
+				if ret_val==None:
+					gstate.new_round()
+					gstate.new_state(4)
+					gstate.turn()
 			elif gstate.state==4:
-				gstate.turn()
-				std_round(self, gstate, blind_round=False, display = self.screen)
-				gstate.new_state(5)
-				print('4ROUND_TOT:', ROUND_TOT)
+				ret_val =std_round(self, gstate, blind_round=False, display = self.screen)
+				if ret_val==None:
+					gstate.new_round()
+					gstate.new_state(5)
+					gstate.river()
 			elif gstate.state==5:
-				gstate.river()
-				std_round(self, gstate, blind_round=False, display = self.screen)
-				showdown(self, gstate)
-				gstate.eliminate_players()
-				gstate.update_players()
-				ROUND_TOT_NEW=0
-				for plkey in gstate.players:
-					ROUND_TOT_NEW+=gstate.players[plkey].bank
-				if ROUND_TOT!=ROUND_TOT_NEW:
-					print('Error: chip bank discrepancy.')
-					print('Opened with %d, closed with %d'%(ROUND_TOT,ROUND_TOT_NEW))
-					sys.exit()
-				if gstate.playing>1:
-					gstate.new_state(1)
-				else:
-					gstate.new_state(6)
+				ret_val =std_round(self, gstate, blind_round=False, display = self.screen)
+				if ret_val==None:
+					showdown(self, gstate)
+					gstate.eliminate_players()
+					gstate.update_players()
+					ROUND_TOT_NEW=0
+					for plkey in gstate.players:
+						ROUND_TOT_NEW+=gstate.players[plkey].bank
+					if ROUND_TOT!=ROUND_TOT_NEW:
+						print('Error: chip bank discrepancy.')
+						print('Opened with %d, closed with %d'%(ROUND_TOT,ROUND_TOT_NEW))
+						sys.exit()
+					if gstate.playing>1:
+						gstate.new_state(1)
+					else:
+						gstate.new_state(6)
 			elif gstate.state==6:
 				winner_screen(self, gstate)
 				return gstate, 'menu'
@@ -708,48 +759,57 @@ class PokerGame():
 				print('Game state error.')
 				sys.exit()
 
+			if ret_val!=None:
+				return gstate, ret_val
+
 			if gstate.state!=prev_state:
-				update_flag = True
+				self.tick(self, gstate=gstate)
 			else:
-				update_flag = False
+				self.tick(self, gstate=None)
 			prev_state=gstate.state
 
-			pressed = pygame.key.get_pressed()
-			if pressed[pygame.K_SPACE]:
-				return gstate, 'pausemenu'
-				
-			# Limit frame speed to 50 FPS
-			self.clock.tick(50)
 
-			"""mpos = pygame.mouse.get_pos()
-			for event in pygame.event.get():
-				if event.type == pygame.QUIT:
-					mainloop = False
-				if event.type == pygame.KEYDOWN:
-					self.mouse_is_visible = False
+	def tick(self, optObj, events=None, gstate=None):
+
+		if events==None:
+			events=pygame.event.get()
+
+		if gstate!=None:
+			# Redraw the background
+			self.blit_gstate(gstate)
+		
+		pressed = pygame.key.get_pressed()
+		if pressed[pygame.K_SPACE]:
+			return 'pausemenu'
+		self.clock.tick(50)
+
+		mpos = pygame.mouse.get_pos()
+		for event in events:
+			if event.type == pygame.QUIT:
+				mainloop = False
+			if event.type == pygame.KEYDOWN:
+				self.mouse_is_visible = False
+				if len(optObj.items)>0:
 					self.set_keyboard_selection(event.key)
-				if event.type == pygame.MOUSEBUTTONDOWN:
-					for item in self.items:
-						if item.is_mouse_selection(mpos):
-							item.response()
- 			"""
-			if pygame.mouse.get_rel() != (0, 0):
-				self.mouse_is_visible = True
-				self.cur_item = None
- 
-			self.set_mouse_visibility()
+			if event.type == pygame.MOUSEBUTTONDOWN:
+				for item in optObj.items:
+					if item.is_mouse_selection(mpos):
+						item.response()
+		
+		if pygame.mouse.get_rel() != (0, 0):
+			self.mouse_is_visible = True
+			self.cur_item = None
 
-			for item in self.items:
-				if self.mouse_is_visible:
-					self.set_mouse_selection(item, mpos)
-				self.screen.blit(item.label, item.position)
-	
+		self.set_mouse_visibility()
 
-			if update_flag:
-				# Redraw the background
-				self.blit_gstate(gstate)
-			
-			pygame.display.flip()
+		for item in optObj.items:
+			if self.mouse_is_visible:
+				self.set_mouse_selection(item, mpos)
+			self.screen.blit(item.label, item.position)
+		
+		pygame.display.flip()
+		
+		return None
 
 	def blit_gstate(self, gstate):
 		self.screen.fill(self.bg_color)

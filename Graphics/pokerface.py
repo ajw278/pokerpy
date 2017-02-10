@@ -17,6 +17,7 @@ from __future__ import print_function
 import menu
 import click_menu
 
+
 import sys
 import random
 import math
@@ -28,8 +29,10 @@ from socket import *
 from pygame.locals import *
 from collections import namedtuple
 
+
 import sys
 scriptpath = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, scriptpath+'/../')
 sys.path.insert(0, scriptpath+'/../Odds/')
 sys.path.insert(0, scriptpath+'/../Objects/')
 sys.path.insert(0, scriptpath+'/../Data/')
@@ -40,7 +43,7 @@ import pokerpy
 import random
 import player
 import table
-
+import saveloadpkl
 #Colours
 BLACK = (  0,   0,   0)
 TRANSP = (0, 0, 0, 0)
@@ -157,13 +160,21 @@ def main():
 				pygame.display.toggle_fullscreen()
 
 		if GAMESTATE == 'menu':
-			menu_items = ('Start', 'Quit')
+			menu_items = ('Start', 'Load', 'Quit')
 			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
 				font=scriptpath+'/Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN)
 			selection = gm.run()
 			if selection==menu_items[0]:
 				GAMESTATE='gamesetup'
 			if selection==menu_items[1]:
+				try:
+					game_state = saveloadpkl.load_obj('saved_game',loc=scriptpath+'/../Data/SaveGames/')
+					state = game_state.state
+					GAMESTATE='play'
+				except:
+					print('No save data found.')
+					GAMESTATE='menu'
+			if selection==menu_items[2]:
 				sys.exit()
 		elif GAMESTATE=='gamesetup':
 			menu_items = ('Play', 'Number Players', 'Starting Bank', 'Quit')
@@ -184,7 +195,7 @@ def main():
 			if selection==menu_items[3]:
 				sys.exit()
 		elif GAMESTATE == 'pausemenu':
-			menu_items = ('Resume', 'Main Menu', 'Quit')
+			menu_items = ('Resume', 'Main Menu', 'Save Game', 'Quit')
 			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
 				font=scriptpath+'/Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN,
 				bg_alpha=100)
@@ -194,6 +205,10 @@ def main():
 			if selection==menu_items[1]:
 				GAMESTATE='menu'
 			if selection==menu_items[2]:
+				if game_state!=None:
+					game_state.update_players()
+				saveloadpkl.save_obj(game_state, 'saved_game', loc = scriptpath+'/../Data/SaveGames/')
+			if selection==menu_items[3]:
 				sys.exit()
 		elif GAMESTATE=='play':
 			"""
@@ -209,7 +224,7 @@ def main():
 			update_flag=False
 			if state==0:
 				game_state=None
-				poker_game = gameplay.PokerGame(DISPLAYSURF, [], textfontObj, bg_color=DARKERGREEN)
+			poker_game = gameplay.PokerGame(DISPLAYSURF, [], textfontObj, bg_color=DARKERGREEN)
 
 			game_state, action = poker_game.run(state, nplayers,chips0, blinds,mindiff, gstate=game_state)
 

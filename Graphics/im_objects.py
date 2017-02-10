@@ -144,7 +144,11 @@ class dealer_box(object):
 			self.text = [self.font.render("", 1, (0,0,0))]
 		self.cards=[]
 		for icard in range(len(table.hand)):
-			position = (int(self.cardpos[icard][0]+self.coords[0]), int(self.cardpos[icard][1]+self.coords[1]))
+			print(self.cardpos, icard)
+			print(table.hand)
+			pc = self.cardpos[icard]
+			ps = self.coords
+			position = (int(pc[0]+ps[0]), int(pc[1]+ps[1]))
 			self.cards.append(table_card(table.hand[icard], position, self.csize, True))
 
 
