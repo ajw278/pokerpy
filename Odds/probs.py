@@ -72,11 +72,11 @@ def prob(table, my_cards, num_opponents, tol):
 if __name__=="__main__":
 	
 	table = []#[Card(3,2), Card(6,1), Card(10,3)]
-	my_cards = [Card(12,1), Card(12,2)]
+	my_cards = [Card(0,1), Card(2,2)]
 	#table = [Card(random.randint(2,14), random.randint(1,4)) for i in range(3)]
 	#my_cards = [Card(random.randint(2,14), random.randint(1,4)) for i in range(2)]
 	print('table cards', table)
 	print('my_cards', my_cards)
 	start_time = time.time()
-	probability = prob(table,my_cards,9,1.e-2)
+	probability = prob(table,my_cards,1,1e-3)
 	print('Probability of winning =', probability , 'after', time.time() - start_time, 'seconds.')

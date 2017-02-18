@@ -1,0 +1,22 @@
+
+"""
+Routines for calculating own probabilities:
+Blind round:
+--> Stored detailed arrays (169 combos)
+Flop:
+--> Exact distribution calc (~6 secs on my laptop, 2 cards)
+Turn
+--> £xact distribution (47 possible, v fast)
+River:
+--> Know hand already
+
+Routines for calculating others priors:
+Blind round:
+--> Uniform prior (saved, two cards held ignored)
+Flop:
+--> Can do estimate from 100 at 2 seconds 47*46*45*44
+Turn:
+--> UNKNOWN
+River:
+--> Exact distribution calc (~6 secs on my laptop, 2 cards)
+"""
