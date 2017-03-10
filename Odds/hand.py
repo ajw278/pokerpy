@@ -19,7 +19,7 @@ from collections import namedtuple
 try:
 	from collections import Counter
 except:
-	import backport_Counter
+	from backport_Counter import Counter
 import random
 import numpy as np
 import itertools

@@ -19,7 +19,7 @@ from collections import namedtuple
 try:
 	from collections import Counter
 except:
-	from backport_Counter import Counter
+	import backport_Counter as Counter
 from operator import attrgetter
 import time
 import scipy
