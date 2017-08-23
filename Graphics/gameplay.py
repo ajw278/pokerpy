@@ -371,8 +371,10 @@ def ask(screen, gstate, font,font_color=(255,0,0), restrict='all', maxlen=20, pr
 		# events for txtbx
 		events = pygame.event.get()
 		if not pgame==None:
-			print('Tick in ask..')
-			ret_val = pgame.tick([v for v in gstate.graphics.pboxes.values()], events=events, gstate = gstate)
+			print('Tick in ask...,....')
+			it_list = [v for v in gstate.graphics.pboxes.values()]+[gstate.graphics.tbox]
+			print(it_list)
+			ret_val = pgame.tick(it_list, events=events, gstate = gstate)
 			if ret_val!=None:
 				return ['exit', ret_val]
 		# process other events
@@ -847,7 +849,7 @@ class PokerGame():
 			if gstate.state!=prev_state:
 				self.tick(None, gstate=gstate)
 			else:
-				self.tick([ v for v in gstate.graphics.pboxes.values()], gstate=gstate)
+				self.tick([ v for v in gstate.graphics.pboxes.values()]+[gstate.graphics.tbox], gstate=gstate)
 			prev_state=gstate.state
 
 
@@ -855,6 +857,7 @@ class PokerGame():
 
 	def tick(self, optObj, events=None, gstate=None):
 
+		print('TICK')
 		if events==None:
 			events=pygame.event.get()
 
@@ -899,7 +902,7 @@ class PokerGame():
 					item.set_mouse_selection(mpos, self.screen)
 				#self.screen.blit(item.label, item.position)
 		
-		pygame.display.flip()
+		#pygame.display.flip()
 
 
 		

@@ -153,6 +153,8 @@ class player_box(object):
 		
 		s.set_alpha(50)       # alpha level
 
+		print('Checking: ', mpos)
+
 		if self.is_mouse_selection(mpos):
 			s.fill((0,255,0))
 		else:
@@ -294,11 +296,23 @@ class dealer_box(object):
 			position = (int(pc[0]+ps[0]), int(pc[1]+ps[1]))
 			self.cards.append(table_card(table.hand[icard], position, self.csize, True))
 
+	def is_mouse_selection(self, (posx, posy)):
+		print(posx, posy)
+		
+		if self.rect.collidepoint(posx, posy):
+			return True
+		return False
+
+
 	def set_mouse_selection(self, mpos, screen):
 		"""Marks the MenuItem the mouse cursor hovers on."""
 
-		s = pygame.Surface((self.coords[2],self.coords[3]))  # the size of your rect
-		s.set_alpha(100)       # alpha level
+		s = pygame.Surface((self.coords[2],self.coords[3]))
+		s.fill(GREEN)  # the size of your rect
+		s.set_alpha(100)
+		screen.blit(s, (self.coords[0],self.coords[1]))
+		
+		s.set_alpha(50)       # alpha level
 
 		if self.is_mouse_selection(mpos):
 			s.fill((0,255,0))
@@ -306,15 +320,12 @@ class dealer_box(object):
 			s.fill((0,0,0))
 
 		
-		screen.blit(s)
+		screen.blit(s, (self.coords[0],self.coords[1]))
 
-
-	
-	def is_mouse_selection(self, (posx, posy)):
-		if self.rect.collidepoint(posx, posy):
-			return True
-		return False
-
+		for card in self.cards:
+			screen.blit(card.image, card.rect)
+		for itxt in range(len(self.text)):
+			screen.blit(self.text[itxt], self.textloc[itxt])
 
 	def response(self, screen):
 
