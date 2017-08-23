@@ -160,6 +160,7 @@ def main():
 				pygame.display.toggle_fullscreen()
 
 		if GAMESTATE == 'menu':
+			#Give an AI option
 			menu_items = ('Start', 'Load', 'Quit')
 			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
 				font=scriptpath+'/Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN)
@@ -177,6 +178,7 @@ def main():
 			if selection==menu_items[2]:
 				sys.exit()
 		elif GAMESTATE=='gamesetup':
+			#Change these items to give a 'game settings' option
 			menu_items = ('Play', 'Number Players', 'Starting Bank', 'Quit')
 			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
 				font=scriptpath+'/Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN)
@@ -226,7 +228,10 @@ def main():
 				game_state=None
 			poker_game = gameplay.PokerGame(DISPLAYSURF, [], textfontObj, bg_color=DARKERGREEN)
 
-			game_state, action = poker_game.run(state, nplayers,chips0, blinds,mindiff, gstate=game_state)
+			action='resume'
+			while action=='resume':
+				game_state, action = poker_game.run(state, nplayers,chips0, blinds,mindiff, gstate=game_state)
+				state = game_state.state
 
 			GAMESTATE =action
 
