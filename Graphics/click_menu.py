@@ -2,8 +2,10 @@
  
 import sys
 import pygame
-
+import entry
 pygame.init()
+
+from pygame.locals import *
  
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -293,6 +295,37 @@ class MiniGameMenu():
                 self.screen.blit(item.label, item.position)
  
             pygame.display.flip()
+
+
+def get_text(screen, font,font_color=(255,0,0), restrict='all', maxlen=20, prompt_string='Enter: ', pgame=None):
+
+	scw = screen.get_rect().width
+	sch = screen.get_rect().height
+	
+	txtbx = entry.Input(maxlength=maxlen, color=font_color, x=int(float(scw)/2.), y=int(0.35*float(sch)), font=font, prompt=prompt_string)
+	while True:
+		# events for txtbx
+		events = pygame.event.get()
+		# process other events
+		for event in events:
+			if event.type == pygame.KEYDOWN:
+				inkey = event.key
+				if (inkey == K_RETURN or inkey == K_KP_ENTER):
+					return txtbx.value
+		s = pygame.Surface((scw,font.get_height()+5))
+		srect = s.get_rect()
+		srect.center =(txtbx.x,txtbx.y)
+		#s.set_alpha(100)                # alpha level
+		s.fill((0,0,0))           # this fills the entire surface
+		screen.blit(s, srect)
+		# update txtbx
+		txtbx.update(events)
+		# blit txtbx on the sceen
+		txtbx.draw(screen)
+		
+		pygame.display.flip()
+	
+
 
  
 if __name__ == "__main__":

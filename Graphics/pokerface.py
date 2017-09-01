@@ -36,6 +36,8 @@ sys.path.insert(0, scriptpath+'/../')
 sys.path.insert(0, scriptpath+'/../Odds/')
 sys.path.insert(0, scriptpath+'/../Objects/')
 sys.path.insert(0, scriptpath+'/../Data/')
+sys.path.insert(0, '../AI/')
+import ai_scripts
 import gameplay
 import im_objects
 import hand
@@ -75,6 +77,21 @@ def textobj(message, size, position):
 def terminate():
 	pygame.quit()
 	sys.exit()
+
+def create_playerdict(nplayers, chips0):
+	defname_ = 'Player {0}'
+	pldict  = {}
+	
+	for ipl in range(nplayers):
+		if ipl==0:
+			AI_type=None
+			ptype = 'faceup'
+		else:
+			AI_type='basic'
+			ptype = 'facedown'
+		pldict[defname_.format(ipl)] = player.player(chips0, ipl, AI_type, defname_.format(ipl), ptype=ptype)
+
+	return pldict
 
 
 def main():
@@ -161,13 +178,22 @@ def main():
 
 		if GAMESTATE == 'menu':
 			#Give an AI option
-			menu_items = ('Start', 'Load', 'Quit')
+			play_ = 'Quick Start'
+			set_ = 'Settings'
+			aitest_ = 'AI Lab'
+			load_ = 'Load'
+			quit_ = 'Quit'
+
+			menu_items = (play_, set_, load_, quit_)
 			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
 				font=scriptpath+'/Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN)
 			selection = gm.run()
-			if selection==menu_items[0]:
+			if selection==play_:
+				GAMESTATE='play'
+				pldict = create_playerdict(nplayers, chips0)
+			if selection==set_:
 				GAMESTATE='gamesetup'
-			if selection==menu_items[1]:
+			if selection==load_:
 				try:
 					game_state = saveloadpkl.load_obj('saved_game',loc=scriptpath+'/../Data/SaveGames/')
 					state = game_state.state
@@ -175,26 +201,32 @@ def main():
 				except:
 					print('No save data found.')
 					GAMESTATE='menu'
-			if selection==menu_items[2]:
+			if selection==quit_:
 				sys.exit()
 		elif GAMESTATE=='gamesetup':
 			#Change these items to give a 'game settings' option
-			menu_items = ('Play', 'Number Players', 'Starting Bank', 'Quit')
+			play_ = 'Play'
+			players_ = 'Players'
+			grules_ = 'Game Rules'
+			gtype_ = 'Game Type'
+			quit_ = 'Quit'
+			menu_items = (play_,players_, grules_, gtype, quit_ )
 			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
 				font=scriptpath+'/Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN)
 			selection = gm.run()
-			if selection==menu_items[0]:
-				GAMESTATE='play'
+			if selection==play_:
+				GAMESTATE='player_set'
+				pldict = create_playerdict(nplayers, chips0)
 				state=0
-			if selection==menu_items[1]:
+			if selection==players_:
 				pplayers +=1
 				pplayers = pplayers%5
 				nplayers=2+pplayers
-			if selection==menu_items[2]:
+			if selection==grules_:
 				extrachips +=100
 				extrachips = extrachips%1000
 				chips0 = blinds[0]*20 + extrachips
-			if selection==menu_items[3]:
+			if selection==quit_:
 				sys.exit()
 		elif GAMESTATE == 'pausemenu':
 			menu_items = ('Resume', 'Main Menu', 'Save Game', 'Quit')
@@ -212,6 +244,84 @@ def main():
 				saveloadpkl.save_obj(game_state, 'saved_game', loc = scriptpath+'/../Data/SaveGames/')
 			if selection==menu_items[3]:
 				sys.exit()
+
+		elif GAMESTATE=='player_set':
+			start_ = 'Start'
+
+			menu_items = [start_]
+			pl_items = []
+			for playerkey in pldict:
+				pl_items.append('{0}'.format(playerkey))
+				menu_items.append('{0}'.format(playerkey))
+			menu_items = tuple(menu_items)
+
+			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
+				font=scriptpath+'/Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN,
+				bg_alpha=100)
+			selection = gm.run()
+			if selection==start_:
+				GAMESTATE='play'
+			if selection in pl_items:
+				back_='Done'
+				none_ = 'None'
+				cancel_='Cancel'
+
+				SUBSTATE=GAMESTATE
+				while SUBSTATE==GAMESTATE:
+					if pldict[selection].auto:
+						AUTO = 'On'
+					else:
+						AUTO = 'Off'
+
+					name_ = 'Name: {0}'.format(pldict[selection].name)
+					ai_ = 'AI: {0}'.format(pldict[selection].ai_type)
+					auto_ = 'Auto: {0}'.format(AUTO)
+					
+            				DISPLAYSURF.fill(DARKERGREEN)
+					submenu_items = (name_, ai_,auto_,back_)
+
+					
+					sm_width= DISPLAYSURF.get_rect().width*0.3
+					sm_height=DISPLAYSURF.get_rect().height*0.7
+					sm_centerx = DISPLAYSURF.get_rect().centerx-sm_width/2.
+					sm_centery = DISPLAYSURF.get_rect().centery-sm_height/2.
+				
+					submenu = click_menu.MiniGameMenu(DISPLAYSURF, submenu_items, bg_color=BLACK, bg_alpha=50, font=scriptpath+'/Fonts/Alien_League.ttf', font_size=30, font_color=WHITE, loc=(sm_centerx, sm_centery), size=(sm_width, sm_height))
+
+					subselection = submenu.run()
+
+					if subselection==back_:
+						SUBSTATE=None
+					if subselection==name_:
+						fontObj = pygame.font.Font(scriptpath+'/Fonts/Alien_League.ttf', 30)
+						pname = click_menu.get_text(DISPLAYSURF, fontObj,prompt_string='Player name: ')
+						pldict[selection].rename(pname)
+						SUBSTATE=GAMESTATE
+					if subselection==auto_:
+						pldict[selection].set_auto()
+					if subselection==ai_:
+						subsubmenu_items = [] 
+						for a in dir(ai_scripts):
+							if not a.startswith('__'):
+								subattr = [b for b in dir(getattr(ai_scripts, a)) if (not b.startswith('__') and not b.startswith('func'))]
+								if len(subattr)==0:
+									subsubmenu_items.append(a)
+								
+						subsubmenu_items += [none_, cancel_]
+						subsubmenu =  click_menu.MiniGameMenu(DISPLAYSURF, subsubmenu_items, bg_color=BLACK, bg_alpha=50, font=scriptpath+'/Fonts/Alien_League.ttf', font_size=30, font_color=WHITE, loc=(sm_centerx, sm_centery), size=(sm_width, sm_height))
+						subsubselection = subsubmenu.run()
+
+						if subsubselection==cancel_:
+							SUBSTATE=GAMESTATE
+						elif subsubselection==none_:
+							pldict[selection].set_ai(None)
+						else:
+							pldict[selection].set_ai(subsubselection)
+							
+						
+						
+						
+			
 		elif GAMESTATE=='play':
 			"""
 			In this section as much as possible of the gameplay will be derived from pokerpy.py
@@ -230,7 +340,7 @@ def main():
 
 			action='resume'
 			while action=='resume':
-				game_state, action = poker_game.run(state, nplayers,chips0, blinds,mindiff, gstate=game_state)
+				game_state, action = poker_game.run(state, pldict,chips0, blinds,mindiff, gstate=game_state)
 				state = game_state.state
 
 			GAMESTATE =action

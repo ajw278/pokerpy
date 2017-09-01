@@ -99,7 +99,8 @@ class player_box(object):
 		self.rect = pygame.Rect(dims)
 		self.margin = int(float(dims[2])/10.)
 		self.font = font
-		self.text =[self.font.render("Player: {0.ID}".format(player), 1, (0,0,0)),self.font.render("Chips: {0.bank}".format(player), 1, (0,0,0))]
+		self.player = player
+		self.text =[self.font.render("{0.name}".format(player), 1, (0,0,0)),self.font.render("Chips: {0.bank}".format(player), 1, (0,0,0))]
 		self.txtrct = []
 		self.textloc = []
 		shft_down = 0
@@ -127,14 +128,14 @@ class player_box(object):
 		self.turn = False
 
 
-	def update(self, player):
-		self.text =[self.font.render("Player: {0.ID}".format(player), 1, (0,0,0)),self.font.render("Chips: {0.bank}".format(player), 1, (0,0,0))]
+	def update(self):
+		self.text =[self.font.render("{0.name}".format(self.player), 1, (0,0,0)),self.font.render("Chips: {0.bank}".format(self.player), 1, (0,0,0))]
 		self.cards=[]
-		for icard in range(len(player.hand)):
+		for icard in range(len(self.player.hand)):
 			px = self.cardpos[icard][0]
 			py = self.cardpos[icard][1]
 			position = (int(px+self.coords[0]), int(py+self.coords[1]))
-			self.cards.append(table_card(player.hand[icard], position, self.csize, player.show))
+			self.cards.append(table_card(self.player.hand[icard], position, self.csize, self.player.show))
 
 	
 	def is_mouse_selection(self, (posx, posy)):
@@ -152,8 +153,6 @@ class player_box(object):
 		screen.blit(s, (self.coords[0],self.coords[1]))
 		
 		s.set_alpha(50)       # alpha level
-
-		print('Checking: ', mpos)
 
 		if self.is_mouse_selection(mpos):
 			s.fill((0,255,0))
@@ -174,6 +173,11 @@ class player_box(object):
 
 
 	def response(self, screen):
+
+		manbet_ = 'Manual Bet'
+		assign_ = 'Assign Cards'
+		change_ = 'Change AI'
+		suggest_ = 'Suggest Move'
 
 		if self.type == 'std':
 			if self.turn:

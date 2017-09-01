@@ -14,32 +14,11 @@ import random
 import numpy as np
 import sys
 sys.path.insert(0, '../Odds/')
+sys.path.insert(0, '../AI/')
 import probs
 import time
+import ai_scripts
 
-"""
-basic_AI
-Place holder for AI routines. Totally random decision.
-"""
-def basic_AI(self_player, players, table):
-	minbet = np.amax(table.roundvals) - table.roundvals[self_player.order]
-	cointoss = random.randint(1, 3)
-	if cointoss==1:
-		return minbet+10
-	elif cointoss==2:
-		return minbet
-	elif minbet>0:
-		return 'f'
-	else:
-		return 0
-"""
-fix_min
-Place holder for AI routines. Always bets minimum but stays in.
-"""
-def fix_min(self_player, players, table):
-	minbet = np.amax(table.roundvals) - table.roundvals[self_player.order]
-	time.sleep(1)
-	return minbet
 
 """
 player class:
@@ -50,12 +29,13 @@ i.e. a guess at how this player will play
 as well as the number of chips and any other publically available information
 """
 class player:
-	
-	def __init__(self, chips, num, AI_type):
+	def __init__(self, chips, num, AI_type, name, ptype='facedown'):
 		self.bank = chips
 		#ID does not change, order changes as dealer changes
 		self.ID = num
+		self.name = name
 		self.order = num
+		self.ptype = ptype
 		
 		#Hand definition
 		self.hand = []
@@ -64,8 +44,10 @@ class player:
 		
 		#If show is True, will allow AIs, humans to see hand
 		self.show = False
-		if AI_type==None:
+		self.auto = True
+		if self.ptype=='faceup':
 			self.show=True
+			self.auto=False
 
 		self.show0 = self.show
 		self.turn=False
@@ -74,15 +56,42 @@ class player:
 		self.betting = True
 		self.fold = False
 
-		#Player type, to be updated with model by AI
-		self.ptype = None
+		self.set_ai(AI_type)
 
 		#Define routine for AI.. not sure 
 		#the best way to do this yet
+		
+	def rename(self, name):
+		self.name =name
+
+
+	def set_ai(self, AI_type):
+		print('Setting ai:', AI_type)
+		
+		self.ai_type = AI_type
+		
 		if AI_type == None:
 			self.ai = None
-		elif AI_type == 'basic':
-			self.ai = fix_min
+			self.auto=False
+		else:
+			ais_all = [a for a in dir(ai_scripts) if not a.startswith('__')]
+			success=False
+			for AI in ais_all:
+				if AI==AI_type:
+					self.ai = getattr(ai_scripts, AI)
+					success=True
+					break
+
+			if not success:
+				print('Error: could not locate AI: {0}'.format(AI_type))
+				sys.exit()
+
+
+	def set_auto(self):
+		if self.ai!=None:
+			self.auto = not self.auto
+		else:
+			self.auto = False
 
 	def new_round(self, num=None):
 		self.order = num

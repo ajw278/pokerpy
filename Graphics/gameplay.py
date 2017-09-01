@@ -62,7 +62,7 @@ class GameGraphics():
 
 	def update_all(self, gstate):
 		for key in gstate.players:
-			self.pboxes[key].update(gstate.players[key])
+			self.pboxes[key].update() #gstate.players[key])
 			s = pygame.Surface((self.pboxes[key].coords[2],self.pboxes[key].coords[3]))  # the size of your rect
 			s.set_alpha(100)       # alpha level
 			if not gstate.players[key].turn:
@@ -107,20 +107,27 @@ class, GameState
 To do: Initialise as either the randomised version, or player defined
 """
 class GameState():
-	def __init__(self, nplayers,chips0,blinds, mindiff, fontObj=None, dealer=None, screen=None):
+	def __init__(self, players, chips0,blinds, mindiff, fontObj=None, dealer=None, screen=None):
 		hum_players = []
 		ai_players = []
+		nplayers =  len(players)
 		self.playing=0
 		if dealer==None:
 			self.dealer = random.randint(0, nplayers-1)
 		else:
 			self.dealer = dealer
+
 		
-		for iplayer in range(nplayers):
-			if iplayer == 0:
-				hum_players.append(player.player(chips0, iplayer, None))
+		iplayer=0
+		if type(players)!=dict:
+			print('Player input not dictionary type.')
+			sys.exit()
+
+		for key in players:
+			if players[key].ptype=='faceup':
+				hum_players.append(players[key])
 			else:
-				ai_players.append(player.player(chips0, iplayer, 'basic'))
+				ai_players.append(players[key])
 		state=1
 		#Need to associate players with their boxes - not all that important but done a little haphazardly..
 		player_dict = {}
@@ -137,8 +144,6 @@ class GameState():
 		self.hps = hum_players
 		self.players = player_dict
 		self.screen =screen
-		self.aips = ai_players
-		self.hps = hum_players
 		self.fontObj = fontObj
 		if self.screen!=None:
 			self.graphics = GameGraphics(self, ai_players, hum_players, fontObj)
@@ -747,12 +752,12 @@ class PokerGame():
 
 		return None
 
-	def run(self, state, nplayers,chips0, blinds, mindiff, gstate=None):
+	def run(self, state, players,chips0, blinds, mindiff, gstate=None):
 		mainloop = True
 		prev_state=-1
 
 		if gstate!=None:
-			gstate_new = GameState(gstate.nplayers,chips0, gstate.blinds, gstate.schip, fontObj=self.fontObj, screen=self.screen)
+			gstate_new = GameState(gstate.players,chips0, gstate.blinds, gstate.schip, fontObj=self.fontObj, screen=self.screen)
 			gstate_new.copy_game(gstate, screen=self.screen)
 			gstate = copy.copy(gstate_new)
 
@@ -774,7 +779,7 @@ class PokerGame():
 			if state==0 or gstate==None:
 				rect_list = []
 				#Assign players to list
-				gstate = GameState(nplayers,chips0, blinds, mindiff, fontObj=self.fontObj, screen=self.screen)
+				gstate = GameState(players,chips0, blinds, mindiff, fontObj=self.fontObj, screen=self.screen)
 				state=1
 			elif gstate.state==1:
 
@@ -857,7 +862,6 @@ class PokerGame():
 
 	def tick(self, optObj, events=None, gstate=None):
 
-		print('TICK')
 		if events==None:
 			events=pygame.event.get()
 
@@ -868,7 +872,7 @@ class PokerGame():
 		pressed = pygame.key.get_pressed()
 		if pressed[pygame.K_SPACE]:
 			return 'pausemenu'
-		self.clock.tick(50)
+		self.clock.tick(100)
 
 		mpos = pygame.mouse.get_pos()
 		for event in events:
