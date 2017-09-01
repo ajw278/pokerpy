@@ -41,7 +41,7 @@ class GameGraphics():
 	def __init__(self, gstate, ai_players, hum_players, fontObj):
 		self.screen = gstate.screen
 		self.scr_rect = self.screen.get_rect()
-		player_boxes, AI_boxes, dealer_box, deal_button = im_objects.position_boxes(self.scr_rect.width, self.scr_rect.height, 2, 5, ai_players, hum_players, fontObj, gstate.dealer)
+		player_boxes, AI_boxes, dealer_box, deal_button, stats_box, suggestion_box = im_objects.position_boxes(self.scr_rect.width, self.scr_rect.height, 2, 5, ai_players, hum_players, fontObj, gstate.dealer)
 		
 		box_dict = {}
 		iplyr=0
@@ -57,6 +57,8 @@ class GameGraphics():
 		self.tbox = dealer_box
 		self.pboxes = box_dict
 		self.button = deal_button
+		self.statbox = stats_box
+		self.suggbox = suggestion_box
 
 
 
@@ -76,6 +78,23 @@ class GameGraphics():
 				self.screen.blit(card.image, card.rect)
 			for itxt in range(len(self.pboxes[key].text)):
 				self.screen.blit(self.pboxes[key].text[itxt], self.pboxes[key].textloc[itxt])
+
+			s = pygame.Surface((self.statbox.coords[2],self.statbox.coords[3]))
+			s.set_alpha(100)
+			s.fill((0,0,0))
+			self.screen.blit(s, (self.statbox.coords[0],self.statbox.coords[1]))
+
+			
+			s = pygame.Surface((self.suggbox.coords[2],self.suggbox.coords[3]))
+			s.set_alpha(100)
+			s.fill((0,0,0))
+			self.screen.blit(s, (self.suggbox.coords[0],self.suggbox.coords[1]))
+
+			
+			for itxt in range(len(self.statbox.text)):
+				self.screen.blit(self.statbox.text[itxt], self.statbox.textloc[itxt])
+			for itxt in range(len(self.statbox.text)):
+				self.screen.blit(self.suggbox.text[itxt], self.suggbox.textloc[itxt])
 
 		
 
@@ -376,9 +395,7 @@ def ask(screen, gstate, font,font_color=(255,0,0), restrict='all', maxlen=20, pr
 		# events for txtbx
 		events = pygame.event.get()
 		if not pgame==None:
-			print('Tick in ask...,....')
 			it_list = [v for v in gstate.graphics.pboxes.values()]+[gstate.graphics.tbox]
-			print(it_list)
 			ret_val = pgame.tick(it_list, events=events, gstate = gstate)
 			if ret_val!=None:
 				return ['exit', ret_val]
@@ -410,7 +427,7 @@ def ask_bet(pgame,gstate,plyrkey):
 	bet = minimum-10
 	if minimum<maximum:
 		while bet<minimum or bet>maximum or bet%gstate.schip!=0:
-			print('Bet for %s'%plyrkey)
+			#print('Bet for %s'%plyrkey)
 			pgame.screen.fill(pgame.bg_color)
 			gstate.graphics.update_all(gstate)
 			bet = ask(pgame.screen, gstate, pgame.fontObj, prompt_string = 'Bet (in multiples %s) between %d and %d: ' %(gstate.schip, minimum, maximum), pgame=pgame)
@@ -466,7 +483,6 @@ def std_round(pgame, gstate,  blind_round=False, display=None, fontObj=None):
 					pgame.blit_gstate(gstate)
 					plind = gstate.players[plkey].order
 					if blind_round:
-						print('DEBUG 1')
 						if gstate.iround==0+bet_offset:
 							print('%s bets small blind: %d' %(plkey, gstate.blinds[0]))
 							new_bet=gstate.blinds[0]
@@ -474,9 +490,12 @@ def std_round(pgame, gstate,  blind_round=False, display=None, fontObj=None):
 							print('%s bets big blind: %d' %(plkey, gstate.blinds[1]))
 							new_bet=gstate.blinds[1]
 					if (not blind_round) or (not (gstate.iround==1 or gstate.iround==0)):
-						print('DEBUG 2')
-						if gstate.players[plkey].ai == None:
-							print('DEBUG 3')
+						if not gstate.players[plkey].auto:
+							if gstate.players[plkey].ai != None:
+								rec_bet = gstate.players[plkey].choose_bet(gstate.players, gstate.table)
+								gstate.graphics.suggbox.update(str(rec_bet))
+							else:
+								gstate.graphics.suggbox.reset()
 							if display!=None:
 								new_bet = ask_bet(pgame, gstate,plkey)
 								if type(new_bet)==str and new_bet not in ['f','F']:
@@ -484,6 +503,7 @@ def std_round(pgame, gstate,  blind_round=False, display=None, fontObj=None):
 							else:
 								new_bet = dummy_func(gstate.players,plkey,gstate.table)
 						else:
+							gstate.graphics.suggbox.reset()
 							new_bet = gstate.players[plkey].choose_bet(gstate.players, gstate.table)
 					if new_bet>np.amax(gstate.table.roundvals):
 						RoundRecord.append(gstate.players[plkey].ID)
@@ -888,7 +908,6 @@ class PokerGame():
 						return keyslct"""
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				if optObj!=None:
-					print(optObj)
 					for item in optObj:
 						if item.is_mouse_selection(mpos):
 							response = item.response(self.screen)

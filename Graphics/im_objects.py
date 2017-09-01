@@ -216,20 +216,28 @@ class stats_box(object):
 		vspace = 0.5
 		self.coords = dims
 		self.rect = pygame.Rect(dims)
+
 		self.margin = int(float(dims[2])/10.)
 		self.font = font
-		self.text =text
+		self.default_text = text
+		
+		self.reset()
+		
+
+	def update(self, text):
+		self.text = [self.font.render(self.default_text,1, (0,0,0)), self.font.render(text, 1, (0,0,0))]
+		self.textloc = (self.coords[0],self.coords[1])
 		self.txtrct = []
 		self.textloc = []
 		shft_down = 0
 		for itxt in range(len(self.text)):
 			self.txtrct.append(self.text[itxt].get_rect())
 			shft_down+=self.txtrct[itxt].height
-			self.textloc.append((dims[0]+int(float(dims[2]-self.txtrct[itxt].width)/2.),dims[1]+int(itxt*1.1*self.txtrct[itxt].height)))
+			self.textloc.append((self.coords[0]+int(float(self.coords[2]-self.txtrct[itxt].width)/2.),self.coords[1]+int(itxt*1.1*self.txtrct[itxt].height)))
 		
 
-	def update(self, text):
-		self.text = text
+	def reset(self):
+		self.update('')
 
 	def is_mouse_selection(self, (posx, posy)):
 		if self.rect.collidepoint(posx, posy):
@@ -431,7 +439,16 @@ def position_boxes(scw, sch, cardspp, dcards, aiplayers, humanplayers, font, dea
 
 	button = DealerButton(button_array, dealID,button_dim)
 
+	statwdth = 0.2*scw
+	stathght = 0.2*sch
 
-	return player_boxes, AI_boxes, dealerbox, button
+	stat_dims =(.5*statwdth, sch-1.5*stathght, statwdth, stathght)
+	sug_dims =(scw-1.5*statwdth, sch-1.5*stathght, statwdth, stathght)
+
+	statbox = stats_box(font, stat_dims, 'Stats')
+	sugbox = stats_box(font, sug_dims, 'Suggested:')
+
+
+	return player_boxes, AI_boxes, dealerbox, button, statbox, sugbox
 
 

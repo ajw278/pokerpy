@@ -126,7 +126,6 @@ class player:
 			return False			
 
 	def win(self, value):
-		print('Value: ', value)
 		self.bank += value
 		if self.bank>0:
 			self.betting=True
@@ -137,7 +136,7 @@ class player:
 		if self.ai!=None:
 			return self.ai(self, players, table)
 		else:
-			print('Bet error.')
+			print('Error: Asked for betting choice with no AI ({0})'.format(self.name))
 			sys.exit()
 
 	def hand_fold(self, show):
