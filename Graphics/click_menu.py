@@ -3,14 +3,29 @@
 import sys
 import pygame
 import entry
+import copy
+import os
+from collections import namedtuple
 pygame.init()
 
 from pygame.locals import *
+
+scriptpath = os.path.dirname(os.path.realpath(__file__))
  
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
+
+KIND_DICT = {0: 'd', 1:'c',2:'h',3:'s'}
+INV_KIND_DICT =  dict([[v,k] for k,v in KIND_DICT.items()])
+VALUE_DICT = {0: 2, 1: 3, 2: 4, 3: 5, 4:6, 5:7,6:8,7:9,8:10,9:'j', 10:'q',11:'k',12:'a'}
+INV_VALUE_DICT = dict([[v,k] for k,v in VALUE_DICT.items()])
+PICTURE = ['j', 'q','k', 'a']
  
+
+Card = namedtuple("Card", ["value", "kind"])
+
+
 class MenuItem(pygame.font.Font):
     def __init__(self, text, font=None, font_size=30,
                  font_color=WHITE, (pos_x, pos_y)=(0, 0)):
@@ -297,7 +312,7 @@ class MiniGameMenu():
             pygame.display.flip()
 
 
-def get_text(screen, font,font_color=(255,0,0), restrict='all', maxlen=20, prompt_string='Enter: ', pgame=None):
+def get_text(screen, font,font_color=(255,0,0), restrict='all', maxlen=20, prompt_string='Enter: ', pgame=None, gstate=None):
 
 	scw = screen.get_rect().width
 	sch = screen.get_rect().height
@@ -306,12 +321,18 @@ def get_text(screen, font,font_color=(255,0,0), restrict='all', maxlen=20, promp
 	while True:
 		# events for txtbx
 		events = pygame.event.get()
+		if not pgame==None:
+			it_list = [v for v in gstate.graphics.pboxes.values()]+[gstate.graphics.tbox]
+			ret_val = pgame.tick(it_list, events=events, gstate = gstate)
+			if ret_val!=None:
+				return ['exit', ret_val]
+		
 		# process other events
 		for event in events:
 			if event.type == pygame.KEYDOWN:
 				inkey = event.key
 				if (inkey == K_RETURN or inkey == K_KP_ENTER):
-					return txtbx.value
+					return txtbx.value	
 		s = pygame.Surface((scw,font.get_height()+5))
 		srect = s.get_rect()
 		srect.center =(txtbx.x,txtbx.y)
@@ -324,6 +345,53 @@ def get_text(screen, font,font_color=(255,0,0), restrict='all', maxlen=20, promp
 		txtbx.draw(screen)
 		
 		pygame.display.flip()
+
+
+def get_cards(screen, ncards, deck, pgame=None, gstate=None): 
+		icards=0 
+		
+		tmp_deck = copy.copy(deck)
+
+		ret_cards = []
+		fontObj = pygame.font.Font(scriptpath+'/Fonts/Alien_League.ttf', 20)
+		orig_message = 'Enter card {0} (e.g. J-S = Jack of Spades): '
+		message = orig_message
+		while icards<ncards:
+			card_str = None
+			while type(card_str)!=str:
+				card_str = get_text(screen, fontObj,prompt_string=message.format(icards+1), pgame=pgame, gstate=gstate)
+			card_str = card_str.lower().replace(" ", "")
+			str_split = card_str.split('-')
+			if len(str_split)!=2:
+				message = 'Check format. '+orig_message
+			else:
+				fail=False
+				if not str_split[0] in PICTURE:
+					try:
+						value = INV_VALUE_DICT[int(str_split[0])]
+					except:
+						fail=True
+					message = 'Value not recognised. '+orig_message
+				else:
+					value = INV_VALUE_DICT[str_split[0]]
+						
+				if not fail: 
+					if not str_split[1] in INV_KIND_DICT:
+						message = 'Kind not recognised. '+orig_message
+					else:
+						kind = INV_KIND_DICT[str_split[1]]
+						incard = Card(value, kind)
+						if not incard in tmp_deck:
+							message = 'Card not in deck. '+orig_message
+						else:
+							message = orig_message
+							ret_cards.append(incard)
+							tmp_deck.remove(incard)
+							icards+=1
+							
+
+
+		return ret_cards
 	
 
 

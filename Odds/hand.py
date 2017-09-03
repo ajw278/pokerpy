@@ -199,6 +199,9 @@ def tiebreaker(hand):
 
 	c_values = np.asarray(values(hand))
 	c_kinds = np.asarray(kinds(hand))
+	print(hand)
+	print(values(hand))
+	print(c_values, c_kinds)
 	max_val = np.amax(c_values)
 	bool_array = c_values==max_val
 	cmax=0

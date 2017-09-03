@@ -29,7 +29,7 @@ i.e. a guess at how this player will play
 as well as the number of chips and any other publically available information
 """
 class player:
-	def __init__(self, chips, num, AI_type, name, ptype='facedown'):
+	def __init__(self, chips, num, AI_type, name, ptype='facedown', gtype='auto'):
 		self.bank = chips
 		#ID does not change, order changes as dealer changes
 		self.ID = num
@@ -44,10 +44,17 @@ class player:
 		
 		#If show is True, will allow AIs, humans to see hand
 		self.show = False
-		self.auto = True
+		self.initdeal=False
+		self.auto=False
 		if self.ptype=='faceup':
 			self.show=True
 			self.auto=False
+			self.initdeal=True
+		elif gtype=='auto':
+			self.auto=True
+
+		
+
 
 		self.show0 = self.show
 		self.turn=False
@@ -58,6 +65,10 @@ class player:
 
 		self.set_ai(AI_type)
 
+		if self.auto and self.ai==None:
+			print('Error: No AI provided for auto player.')
+			sys.exit()
+
 		#Define routine for AI.. not sure 
 		#the best way to do this yet
 		
@@ -66,7 +77,6 @@ class player:
 
 
 	def set_ai(self, AI_type):
-		print('Setting ai:', AI_type)
 		
 		self.ai_type = AI_type
 		
@@ -87,9 +97,17 @@ class player:
 				sys.exit()
 
 
+	def set_initdeal(self):
+		self.initdeal= not self.initdeal
+		if not self.initdeal:
+			self.auto=False
+		
+
 	def set_auto(self):
 		if self.ai!=None:
 			self.auto = not self.auto
+			if self.auto == True:
+				self.initdeal=True
 		else:
 			self.auto = False
 
@@ -110,8 +128,11 @@ class player:
 		self.show = True
 
 	def deal_cards(self, cards):
+		print('Dealing cards to', self.ID)
+		print('Initial hand: ', self.hand)
 		for card in cards:
 			self.hand.append(card)
+		print('After hand:', self.hand)
 	
 	def spend(self, value):
 		self.turn=False

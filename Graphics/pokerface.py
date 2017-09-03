@@ -78,7 +78,7 @@ def terminate():
 	pygame.quit()
 	sys.exit()
 
-def create_playerdict(nplayers, chips0):
+def create_playerdict(nplayers, chips0, gametype):
 	defname_ = 'Player {0}'
 	pldict  = {}
 	
@@ -87,9 +87,9 @@ def create_playerdict(nplayers, chips0):
 			AI_type=None
 			ptype = 'faceup'
 		else:
-			AI_type='basic'
+			AI_type='fix_min'
 			ptype = 'facedown'
-		pldict[defname_.format(ipl)] = player.player(chips0, ipl, AI_type, defname_.format(ipl), ptype=ptype)
+		pldict[defname_.format(ipl)] = player.player(chips0, ipl, AI_type, defname_.format(ipl), ptype=ptype, gtype=gametype)
 
 	return pldict
 
@@ -163,13 +163,15 @@ def main():
 	nplayers = 2
 	pplayers = 0
 
+	all_types = ['auto', 'manual']
+	itype = 0
+	gametype=all_types[itype]
 	chips0 = 400
 	mindiff=5
 	extrachips=0
 
 	blinds = [10, 20]
 
-	gtype='std'
 
 	while True:
 		for e in pygame.event.get():
@@ -179,7 +181,7 @@ def main():
 		if GAMESTATE == 'menu':
 			#Give an AI option
 			play_ = 'Quick Start'
-			set_ = 'Settings'
+			set_ = 'Game Setup'
 			aitest_ = 'AI Lab'
 			load_ = 'Load'
 			quit_ = 'Quit'
@@ -194,6 +196,7 @@ def main():
 			if selection==set_:
 				GAMESTATE='gamesetup'
 			if selection==load_:
+				pldict = create_playerdict(nplayers, chips0)
 				try:
 					game_state = saveloadpkl.load_obj('saved_game',loc=scriptpath+'/../Data/SaveGames/')
 					state = game_state.state
@@ -206,23 +209,27 @@ def main():
 		elif GAMESTATE=='gamesetup':
 			#Change these items to give a 'game settings' option
 			play_ = 'Play'
-			players_ = 'Players'
-			grules_ = 'Game Rules'
-			gtype_ = 'Game Type'
+			gtype_ = 'Game Type: {0}'.format(gametype)
+			players_ = 'Players: {0}'.format(nplayers)
+			startchip_ = 'Starting Chips: {0}'.format(chips0)
 			quit_ = 'Quit'
-			menu_items = (play_,players_, grules_, gtype, quit_ )
+			menu_items = (play_,players_, startchip_, gtype_, quit_ )
 			gm = click_menu.GameMenu(DISPLAYSURF, menu_items, bg_color=DARKERGREEN, 
 				font=scriptpath+'/Fonts/Alien_League.ttf', font_size=LARGETEXT, font_color=GREEN)
 			selection = gm.run()
 			if selection==play_:
 				GAMESTATE='player_set'
-				pldict = create_playerdict(nplayers, chips0)
+				pldict = create_playerdict(nplayers, chips0, gametype)
 				state=0
+			if selection==gtype_:
+				itype +=1
+				itype = itype%len(all_types)
+				gametype = all_types[itype]
 			if selection==players_:
 				pplayers +=1
 				pplayers = pplayers%5
 				nplayers=2+pplayers
-			if selection==grules_:
+			if selection==startchip_:
 				extrachips +=100
 				extrachips = extrachips%1000
 				chips0 = blinds[0]*20 + extrachips
@@ -273,12 +280,19 @@ def main():
 					else:
 						AUTO = 'Off'
 
+					
+					if pldict[selection].initdeal:
+						IDEAL = 'On'
+					else:
+						IDEAL = 'Off'
+
 					name_ = 'Name: {0}'.format(pldict[selection].name)
 					ai_ = 'AI: {0}'.format(pldict[selection].ai_type)
 					auto_ = 'Auto: {0}'.format(AUTO)
+					initdeal_ = 'Initial Deal: {0}'.format(IDEAL)
 					
             				DISPLAYSURF.fill(DARKERGREEN)
-					submenu_items = (name_, ai_,auto_,back_)
+					submenu_items = (name_, ai_,auto_,initdeal_, back_)
 
 					
 					sm_width= DISPLAYSURF.get_rect().width*0.3
@@ -299,6 +313,8 @@ def main():
 						SUBSTATE=GAMESTATE
 					if subselection==auto_:
 						pldict[selection].set_auto()
+					if subselection==initdeal_:
+						pldict[selection].set_initdeal()
 					if subselection==ai_:
 						subsubmenu_items = [] 
 						for a in dir(ai_scripts):
@@ -329,14 +345,13 @@ def main():
 			The exceptions to this should only be the graphical elements of the game.
 			"""
 
-			"""TO REWRITE ALL OF THIS ONCE pokerpy.py IS COMPLETEISH"""
 			#State=0 --> init game
 			#State=1 --> deal
 			#State=2 --> play, blind
 			update_flag=False
 			if state==0:
 				game_state=None
-			poker_game = gameplay.PokerGame(DISPLAYSURF, [], textfontObj, bg_color=DARKERGREEN)
+			poker_game = gameplay.PokerGame(DISPLAYSURF, [], textfontObj, bg_color=DARKERGREEN, game_type=gametype)
 
 			action='resume'
 			while action=='resume':

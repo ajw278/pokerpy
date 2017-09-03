@@ -17,12 +17,16 @@ from collections import namedtuple
 import os
 import menu
 import click_menu
+import copy
 
 scriptpath = os.path.dirname(os.path.realpath(__file__))
 
 #Graphics dictionary - for the names of the card files
 KIND_DICT = {0: 'd', 1:'c',2:'h',3:'s'}
+INV_KIND_DICT =  dict([[v,k] for k,v in KIND_DICT.items()])
 VALUE_DICT = {0: 2, 1: 3, 2: 4, 3: 5, 4:6, 5:7,6:8,7:9,8:10,9:'j', 10:'q',11:'k',12:'a'}
+INV_VALUE_DICT = dict([[v,k] for k,v in VALUE_DICT.items()])
+PICTURE = ['j', 'q','k', 'a']
 
 CW2H = 0.6
 
@@ -339,49 +343,32 @@ class dealer_box(object):
 		for itxt in range(len(self.text)):
 			screen.blit(self.text[itxt], self.textloc[itxt])
 
-	def response(self, screen):
 
-		if len(self.cards) == 0:
-			menu_items = ['Manual Flop', 'Auto Flop', 'Player Order', 'Dealer', 'Cancel']
-		elif len(self.cards)==3:
-			menu_items = ['Manual Turn', 'Auto Turn', 'Player Order', 'Dealer', 'Cancel']
-		elif len(self.cards)==4:
-			menu_items = ['Manual River', 'Auto River', 'Player Order', 'Dealer', 'Cancel']
-			
-		else:
-			menu_items = ['Manual Bet', 'Assign Cards', 'Player Order', 'Dealer', 'Cancel']
+	def response_deal(self, screen, ncards,deck, pgame=None, gstate=None):
+		cards = click_menu.get_cards(screen, ncards, deck, pgame=pgame, gstate=gstate)	
+		return cards
+
+	def response(self, screen):
+		edit_ = 'Edit Players'
+		porder_= 'Player Order'
+		dealer_ = 'Dealer'
+		back_ = 'Done'
+		menu_items = [edit_,porder_, dealer_, back_]
 
 		ipm = click_menu.MiniGameMenu(screen, menu_items, bg_color=BLACK, bg_alpha=50, font=scriptpath+'/Fonts/Alien_League.ttf', font_size=30, font_color=WHITE, loc= (self.coords[0]-0.2*self.coords[2], self.coords[1]-0.1*self.coords[3]), size=(1.4*self.coords[2], 1.2*self.coords[3]))
 		
 		selection = ipm.run()
 
-		if len(self.cards) == 0:
-			if selection == menu_items[-1]:
-				return 'resume'
-			elif selection == menu_items[0]:
-				print('Manual bet selected... Not implemented yet.')
-				return 'resume'
-			elif selection == menu_items[1]:
-				print('Assign cards selected... Not implemented yet.')
-				return 'resume'
-			elif selection == menu_items[2]:
-				print('Suggest AI move selected... Not implemented yet.')
-				return 'resume'
+		if selection == back_:
 			return 'resume'
-		else:
-			if selection == menu_items[-1]:
-				return 'resume'
-			elif selection == menu_items[0]:
-				print('Manual bet selected... Not implemented yet.')
-				return 'resume'
-			elif selection == menu_items[1]:
-				print('Assign cards selected... Not implemented yet.')
-				return 'resume'
-			elif selection == menu_items[2]:
-				print('Suggest AI move selected... Not implemented yet.')
-				return 'resume'
+		elif selection == porder_:
 			return 'resume'
-
+		elif selection == dealer_:
+			return 'resume'
+		elif selection == edit_:
+			return 'resume'
+		
+		return 'resume'
 
 class DealerButton(pygame.sprite.Sprite):
 	def __init__(self, positions, ID, dims):

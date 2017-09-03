@@ -19,6 +19,7 @@ import hand
 import numpy as np
 import time
 import copy
+import click_menu
 
 from socket import *
 #from menu import *
@@ -80,13 +81,13 @@ class GameGraphics():
 				self.screen.blit(self.pboxes[key].text[itxt], self.pboxes[key].textloc[itxt])
 
 			s = pygame.Surface((self.statbox.coords[2],self.statbox.coords[3]))
-			s.set_alpha(100)
+			s.set_alpha(50)
 			s.fill((0,0,0))
 			self.screen.blit(s, (self.statbox.coords[0],self.statbox.coords[1]))
 
 			
 			s = pygame.Surface((self.suggbox.coords[2],self.suggbox.coords[3]))
-			s.set_alpha(100)
+			s.set_alpha(50)
 			s.fill((0,0,0))
 			self.screen.blit(s, (self.suggbox.coords[0],self.suggbox.coords[1]))
 
@@ -126,10 +127,11 @@ class, GameState
 To do: Initialise as either the randomised version, or player defined
 """
 class GameState():
-	def __init__(self, players, chips0,blinds, mindiff, fontObj=None, dealer=None, screen=None):
+	def __init__(self, players, chips0,blinds, mindiff, gtype, fontObj=None, dealer=None, screen=None):
 		hum_players = []
 		ai_players = []
 		nplayers =  len(players)
+		self.gtype = gtype
 		self.playing=0
 		if dealer==None:
 			self.dealer = random.randint(0, nplayers-1)
@@ -205,7 +207,14 @@ class GameState():
 				print('Dealer search error.')
 				sys.exit()
 
-	def new_hand(self):
+	def assign_hands(self, hand_dict, newround=False):
+		for plkey in hand_dict:
+			for card in hand_dict[plkey]:
+				self.deck.remove(card)
+		pokerpy.assign_hand(self.dealer, self.players, hand_dict, newround=newround)
+
+
+	def new_hand(self, cardset=None):
 		for plkey in self.players:
 			if self.players[plkey].bank>0:
 				self.players[plkey].new_round()
@@ -215,8 +224,11 @@ class GameState():
 		self.roundorder=[]
 		self.deck = pokerpy.init_deck()
 		self.table.new_hand(self)
-		cardset, self.deck = pokerpy.init_deal(self.deck, self.playing)
-		pokerpy.assign_hand(self.dealer, self.players, cardset)
+		if cardset==None:
+			cardset, self.deck = pokerpy.init_deal(self.deck, self.playing)
+			pokerpy.assign_hand(self.dealer, self.players, cardset, newround=True)
+		else:
+			self.assign_hands(cardset, newround=True)
 		self.state=2
 		self.iround=0
 
@@ -556,9 +568,15 @@ Convoluted and unecessarily complicated right now... need to check all this
 In: Players, table, betting order (not used atm, for the reveal if needed)
 
 """
-def showdown(pgame, gstate, gtype=None):
-	if gtype=='manual':
-		get_final_hands(deck, players, dealer)
+def showdown(pgame, gstate):
+	hand_dict = {}
+	for plkey in gstate.players:
+		if not gstate.players[plkey].fold and not gstate.players[plkey].out and len(gstate.players[plkey].hand)==0:
+			hand_dict[plkey] = click_menu.get_cards(pgame.screen, 2, gstate.deck)
+		else:
+			print(gstate.players[plkey].fold, gstate.players[plkey].out, len(gstate.players[plkey].hand))
+			hand_dict[plkey] = []
+	gstate.assign_hands(hand_dict)
 
 	gstate.show_hands()
 	pgame.blit_gstate(gstate)
@@ -571,6 +589,7 @@ def showdown(pgame, gstate, gtype=None):
 	for plkey in gstate.players:
 		if not gstate.players[plkey].fold and not gstate.players[plkey].out:
 			tot_hand = gstate.players[plkey].hand + gstate.table.hand
+			print('SHOWDOWN:',plkey, ':',  gstate.players[plkey].hand)
 			playing_hands[plkey], playing_values[plkey] = hand.full_hand_best(tot_hand, 5)
 			tiebreak_values[plkey] = hand.tiebreaker(gstate.players[plkey].hand)
 			playing_hands_name[plkey] = hand.poker_hand(playing_hands[plkey])
@@ -777,7 +796,8 @@ class PokerGame():
 		prev_state=-1
 
 		if gstate!=None:
-			gstate_new = GameState(gstate.players,chips0, gstate.blinds, gstate.schip, fontObj=self.fontObj, screen=self.screen)
+			gstate_new = GameState(gstate.players,chips0, gstate.blinds, gstate.schip, gstate.gtype, fontObj=self.fontObj, screen=self.screen)
+			self.gtype = gstate.gtype
 			gstate_new.copy_game(gstate, screen=self.screen)
 			gstate = copy.copy(gstate_new)
 
@@ -799,13 +819,24 @@ class PokerGame():
 			if state==0 or gstate==None:
 				rect_list = []
 				#Assign players to list
-				gstate = GameState(players,chips0, blinds, mindiff, fontObj=self.fontObj, screen=self.screen)
+				gstate = GameState(players,chips0, blinds, mindiff, self.gtype, fontObj=self.fontObj, screen=self.screen)
 				state=1
 			elif gstate.state==1:
 
 				gstate.move_dealer()
 				#self.screen.blit(mbg, (CENTER[0]-SCW/2,CENTER[1]-SCH/2))
-				gstate.new_hand()
+				if self.gtype=='auto':
+					cardset=None
+				else:
+					cardset = {}
+					full_deck = pokerpy.init_deck()
+					for plkey in gstate.players:
+						if not gstate.players[plkey].initdeal:
+							cardset[plkey] = []
+						else:	
+							cardset[plkey] =click_menu.get_cards(self.screen, 2, full_deck, pgame=self, gstate=gstate)
+							
+				gstate.new_hand(cardset=cardset)
 				
 				ROUND_TOT=0
 				for plkey in gstate.players:
@@ -822,7 +853,7 @@ class PokerGame():
 					if self.gtype=='auto':
 						gstate.flop()
 					else:
-						cards = gstate.graphics.tbox.response('flop')
+						cards = gstate.graphics.tbox.response_deal(self.screen, 3, gstate.deck, pgame=self, gstate=gstate)
 						gstate.flop(cards)
 			elif gstate.state==3:
 				ret_val =std_round(self, gstate, blind_round=False, display = self.screen)
@@ -832,7 +863,7 @@ class PokerGame():
 					if self.gtype=='auto':
 						gstate.turn()
 					else:
-						cards = gstate.graphics.tbox.response('turn')
+						cards = gstate.graphics.tbox.response_deal(self.screen, 1, gstate.deck)
 						gstate.turn(cards)
 			elif gstate.state==4:
 				ret_val =std_round(self, gstate, blind_round=False, display = self.screen)
@@ -842,7 +873,7 @@ class PokerGame():
 					if self.gtype=='auto':
 						gstate.river()
 					else:
-						cards = gstate.graphics.tbox.response('river')
+						cards = gstate.graphics.tbox.response_deal(self.screen, 1, gstate.deck)
 						gstate.river(cards)
 			elif gstate.state==5:
 				ret_val =std_round(self, gstate, blind_round=False, display = self.screen)
@@ -892,7 +923,7 @@ class PokerGame():
 		pressed = pygame.key.get_pressed()
 		if pressed[pygame.K_SPACE]:
 			return 'pausemenu'
-		self.clock.tick(100)
+		self.clock.tick(20)
 
 		mpos = pygame.mouse.get_pos()
 		for event in events:
@@ -937,7 +968,7 @@ class PokerGame():
 		self.screen.fill(self.bg_color)
 		gstate.graphics.update_all(gstate)
 			
-		pygame.display.flip()
+		#pygame.display.flip()
  
 if __name__ == "__main__":
     def hello_world():

@@ -169,7 +169,7 @@ assign_hand
 In: dealer index, player dictionary, hand list
 Out: player dictionary with hands assigned
 """
-def assign_hand(dealer, players, hands):
+def assign_hand(dealer, players, hands, newround=True):
 	nplayers = 0
 	for plkey in players:
 		if not players[plkey].out:
@@ -190,10 +190,15 @@ def assign_hand(dealer, players, hands):
 		for plyr_key in players:
 			if players[plyr_key].ID==ID:
 				oorder = iID
-				players[plyr_key].new_round((oorder-(dealer+1))%nplayers)
+				if newround:
+					players[plyr_key].new_round((oorder-(dealer+1))%nplayers)
 				for hand_no in hands_all:
 					if players[plyr_key].order==hand_no:
-						players[plyr_key].deal_cards(hands[hand_no])
+						if type(hands)==dict:
+							print('Dealing {0} to {1}'.format(hands[plyr_key], plyr_key))
+							players[plyr_key].deal_cards(hands[plyr_key])
+						else:
+							players[plyr_key].deal_cards(hands[hand_no])
 			if players[plyr_key].out:
 				players[plyr_key].new_round(None)
 	
@@ -205,23 +210,23 @@ def assign_hand(dealer, players, hands):
 	all_hands = []
 	print('PLAYERS', players)
 	for plkey in players:
-		print(players[plkey].order)
+		"""print(players[plkey].order)
 		if players[plkey].hand in all_hands and not players[plkey].out:
-			print('Repeated hand error.')
+			print('Error: Repeated hand error.')
 			print(hands)
 			print(all_hands)
 			print('Error on :', plkey)
 			for plkey2 in players:
 				print(plkey2, players[plkey2].order, players[plkey2].hand,players[plkey2].out)
-			sys.exit()
-		elif len(players[plkey].hand)>2:
-			print('Temporary error - >2 cards in hand')
+			sys.exit()"""
+		if len(players[plkey].hand)>2:
+			print('Error: >2 cards in hand')
 			print(hands)
 			for plkey2 in players:
 				print(plkey2, players[plkey2].order, players[plkey2].hand)
 			sys.exit()
 		elif len(hands)>len(players):
-			print('More hands than players..')
+			print('Error: More hands than players..')
 			print(len(hands), len(players))
 			print('In players ', ninplayers)
 			sys.exit()
