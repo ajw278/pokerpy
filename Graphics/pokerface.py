@@ -110,7 +110,7 @@ def main():
 	infoObj = pygame.display.Info()
 	SCW = infoObj.current_w
 	SCH = infoObj.current_h
-	DISPLAYSURF = pygame.display.set_mode((SCH, SCH))# pygame.FULLSCREEN, 32)
+	DISPLAYSURF = pygame.display.set_mode((SCH, SCH)) # pygame.FULLSCREEN, 32)
 	SCRECT = DISPLAYSURF.get_rect()
 	pygame.display.set_caption('PokerPy')
 	SCW =SCH
@@ -339,12 +339,6 @@ def main():
 						
 			
 		elif GAMESTATE=='play':
-			"""
-			In this section as much as possible of the gameplay will be derived from pokerpy.py
-			- this is where the main logic of the game should be stored.
-			The exceptions to this should only be the graphical elements of the game.
-			"""
-
 			#State=0 --> init game
 			#State=1 --> deal
 			#State=2 --> play, blind

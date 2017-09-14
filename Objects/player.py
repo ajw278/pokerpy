@@ -51,9 +51,7 @@ class player:
 			self.auto=False
 			self.initdeal=True
 		elif gtype=='auto':
-			self.auto=True
-
-		
+			self.auto=True	
 
 
 		self.show0 = self.show

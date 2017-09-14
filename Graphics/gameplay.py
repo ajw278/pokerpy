@@ -1,8 +1,20 @@
+"""=================================================================================================
+//  POKERPY :
+//  Python code for automated poker learning and playing.
+//  https://github.com/ajw278/pokerpy.git
+//  Contact : ajwinter@ast.cam.ac.uk
+//  Contributors : Andrew Winter, Pablo Lemos Portela, Cameron Lemon
+//  Description : 
+//
+//  Last edited: 20/12/2016
+//================================================================================================="""
+
+
+#gameplay.py
+#class and function definitions for gameplay utilities
+
 #!/usr/bin/python
 
-"""
-Notes:
-"""
 from __future__ import print_function
 
 
@@ -36,10 +48,14 @@ kind_chars = 'cdshCDSH'
 number_chars='0123456789'
 letter_chars ='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
+"""
+class, GameGraphics
 
-
+Graphical interface for gameplay (for use with human players)
+"""
 class GameGraphics():
 	def __init__(self, gstate, ai_players, hum_players, fontObj):
+		print('Initialising graphics...')
 		self.screen = gstate.screen
 		self.scr_rect = self.screen.get_rect()
 		player_boxes, AI_boxes, dealer_box, deal_button, stats_box, suggestion_box = im_objects.position_boxes(self.scr_rect.width, self.scr_rect.height, 2, 5, ai_players, hum_players, fontObj, gstate.dealer)
@@ -119,12 +135,31 @@ class GameGraphics():
 			print(plkey, ': ', gstate.players[plkey].order)
 
 		return None
+"""
+class, StatGraphics
+
+Graphical interface for non-human playing/training AIs
+This should not be contained within the GameState class, 
+as with the GameGraphics class.
+"""
+class StatGraphics():
+	def __init__(self, ai_players,fontObj):
+		print('Initialising graphics...')
+		self.screen = gstate.screen
+		self.scr_rect = self.screen.get_rect()
+
+
+
+	def update_all(self, gstate):
+		
+
+		return None
 
 
 """
 class, GameState
 
-To do: Initialise as either the randomised version, or player defined
+Where all information about the present game is stored
 """
 class GameState():
 	def __init__(self, players, chips0,blinds, mindiff, gtype, fontObj=None, dealer=None, screen=None):
@@ -166,8 +201,10 @@ class GameState():
 		self.players = player_dict
 		self.screen =screen
 		self.fontObj = fontObj
-		if self.screen!=None:
+		if self.screen!=None and gtype!='stats':
 			self.graphics = GameGraphics(self, ai_players, hum_players, fontObj)
+		elif gtype=='stats':
+			self.graphics = StatGraphics(self, ai_players, hum_players, fontObj)
 		else:
 			self.graphics = None
 
@@ -388,19 +425,15 @@ class GameState():
 			self.graphics.update_all(self)
 
 
-def dummy_func(*args):
-	print('Not implemented yet.')
-	sys.exit()
+"""
+func, ask
 
-class DummyOptions():
-	def __init__(self):
-		self.items = []
-
+Ask user for typed input
+"""
 def ask(screen, gstate, font,font_color=(255,0,0), restrict='all', maxlen=20, prompt_string='Enter: ', pgame=None):
 
 	scw = screen.get_rect().width
 	sch = screen.get_rect().height
-	options = DummyOptions()
 	
 	txtbx = entry.Input(maxlength=maxlen, color=font_color, x=int(float(scw)/2.), y=int(0.35*float(sch)), font=font, prompt=prompt_string)
 	while True:
@@ -430,7 +463,11 @@ def ask(screen, gstate, font,font_color=(255,0,0), restrict='all', maxlen=20, pr
 		
 		pygame.display.flip()
 
+"""
+func, ask_bet
 
+Ask user specifically for betting input
+"""
 def ask_bet(pgame,gstate,plyrkey):
 
 	minimum = np.amax(gstate.table.roundvals) - gstate.table.roundvals[gstate.players[plyrkey].order]
@@ -469,8 +506,12 @@ def ask_bet(pgame,gstate,plyrkey):
 		if bet==maximum:
 			bet=minimum
 	return bet
+"""
+func, std_round
 
-
+Normal round gameplay (not final round)
+In: PokerGame, Gamestate - unecessary, clean up later
+"""
 def std_round(pgame, gstate,  blind_round=False, display=None, fontObj=None):
 	RoundFlag=True
 	bet=0
@@ -480,6 +521,10 @@ def std_round(pgame, gstate,  blind_round=False, display=None, fontObj=None):
 	round_val = np.amax(gstate.table.roundvals)
 	RoundRecord=[]
 	gstate.update_players()
+
+	gstate.graphics.update_all(gstate)
+	pgame.blit_gstate(gstate, blit=True)
+	
 	if gstate.betplayers>1:
 		while RoundFlag and gstate.inplayers>1: 
 			print('Bet number: ', gstate.iround)
@@ -492,7 +537,7 @@ def std_round(pgame, gstate,  blind_round=False, display=None, fontObj=None):
 
 				if gstate.players[plkey].order==gstate.iround%gstate.playing and not gstate.players[plkey].out and  gstate.players[plkey].betting:
 					gstate.players[plkey].start_turn()
-					pgame.blit_gstate(gstate)
+					pgame.blit_gstate(gstate, blit=True)
 					plind = gstate.players[plkey].order
 					if blind_round:
 						if gstate.iround==0+bet_offset:
@@ -566,7 +611,6 @@ def std_round(pgame, gstate,  blind_round=False, display=None, fontObj=None):
 showdown
 Convoluted and unecessarily complicated right now... need to check all this
 In: Players, table, betting order (not used atm, for the reveal if needed)
-
 """
 def showdown(pgame, gstate):
 	hand_dict = {}
@@ -964,11 +1008,12 @@ class PokerGame():
 
 	
 
-	def blit_gstate(self, gstate):
+	def blit_gstate(self, gstate, blit=False):
 		self.screen.fill(self.bg_color)
 		gstate.graphics.update_all(gstate)
 			
-		#pygame.display.flip()
+		if blit:
+			pygame.display.flip()
  
 if __name__ == "__main__":
     def hello_world():
