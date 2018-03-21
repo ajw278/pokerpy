@@ -86,7 +86,10 @@ class player:
 			success=False
 			for AI in ais_all:
 				if AI==AI_type:
-					self.ai = getattr(ai_scripts, AI)
+					if not AI_type==None:
+						self.ai = getattr(ai_scripts, AI)()
+					else:
+						self.ai = None
 					success=True
 					break
 
@@ -153,7 +156,7 @@ class player:
 
 	def choose_bet(self, players, table):
 		if self.ai!=None:
-			return self.ai(self, players, table)
+			return self.ai.make_decision(self, players, table)
 		else:
 			print('Error: Asked for betting choice with no AI ({0})'.format(self.name))
 			sys.exit()
