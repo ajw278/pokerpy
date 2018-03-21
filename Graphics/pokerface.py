@@ -192,11 +192,11 @@ def main():
 			selection = gm.run()
 			if selection==play_:
 				GAMESTATE='play'
-				pldict = create_playerdict(nplayers, chips0)
+				pldict = create_playerdict(nplayers, chips0, gametype)
 			if selection==set_:
 				GAMESTATE='gamesetup'
 			if selection==load_:
-				pldict = create_playerdict(nplayers, chips0)
+				pldict = create_playerdict(nplayers, chips0, gametype)
 				try:
 					game_state = saveloadpkl.load_obj('saved_game',loc=scriptpath+'/../Data/SaveGames/')
 					state = game_state.state
