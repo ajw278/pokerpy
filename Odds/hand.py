@@ -90,7 +90,7 @@ In: list of named tuples 'cards'
 Out: card values
 """
 def values(cards):
-	return [c.value for c in cards]
+	return list([c.value for c in cards])
 
 """
 kinds:
@@ -150,7 +150,6 @@ Out: Highest hand value
 """
 def poker_hand(hand, possible_scores=[is_straight_flush, is_four_of_a_kind, is_full_house,
                         is_flush, is_straight, is_three_of_a_kind, is_two_pair, is_pair, is_nothing]):
-	
 	return first_true(hand, possible_scores).__name__[3:]
 
 
@@ -170,11 +169,12 @@ def hand_value(hand, suit_vals=False):
 	hand_name = poker_hand(hand)
 	valarray[0] =  hand_dict[hand_name]
 	
-	c_values = values(hand)
+	c_values = list(values(hand))
 	ival = 1
 	while (ival<len(valarray)-1) and len(list(c_values))>=1:
+		c_values = list(c_values)
 		mcommon_value = most_common(c_values)
-		mcommon_count = c_values.count(mcommon_value)
+		mcommon_count = list(c_values).count(mcommon_value)
 		highest_mcommon=0
 		val = 0
 		for val in range(VALUES):
