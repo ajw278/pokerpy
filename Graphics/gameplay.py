@@ -783,7 +783,7 @@ class PokerGame():
 			if key == pygame.K_SPACE or key == pygame.K_RETURN:
 				text = optObj.items[optObj.cur_item].text
 				return text
- 	"""
+	"""
 	def set_mouse_selection(self, item, mpos):
 		if item.is_mouse_selection(mpos):
 			item.set_font_color(RED)
@@ -800,7 +800,7 @@ class PokerGame():
 			pygame.mouse.set_visible(False)
 	
  
-    	def set_keyboard_selection(self, key):
+	def set_keyboard_selection(self, key):
 		"""
 		Marks the MenuItem chosen via up and down keys.
 		"""

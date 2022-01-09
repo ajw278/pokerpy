@@ -61,7 +61,10 @@ In: list of values
 Out: most common value in list
 """
 def most_common(lst):
-	return Counter(lst).most_common()[0][0]
+	if len(list(lst))>0:
+		return Counter(lst).most_common()[0][0]
+	else:
+		return None
 
 """
 most_common_count:
@@ -169,7 +172,7 @@ def hand_value(hand, suit_vals=False):
 	
 	c_values = values(hand)
 	ival = 1
-	while (ival<len(valarray)-1) and len(c_values)>=1:
+	while (ival<len(valarray)-1) and len(list(c_values))>=1:
 		mcommon_value = most_common(c_values)
 		mcommon_count = c_values.count(mcommon_value)
 		highest_mcommon=0

@@ -132,13 +132,13 @@ def main():
 	DARKRED = (100,   0,   0)
 
 	#Assign fonts
-	SMALLTEXT = SCH/30
-	MIDTEXT = SCH/25
-	LARGETEXT = SCH/15
-	MASSIVETEXT = SCH/8
-	titlefontObj = pygame.font.Font(scriptpath+'/Fonts/Alien_League.ttf', LARGETEXT)
-	levelfontObj = pygame.font.Font(scriptpath+'/Fonts/Alien_League.ttf', MIDTEXT)
-	textfontObj = pygame.font.Font(scriptpath+'/Fonts/Alien_League.ttf', SMALLTEXT)
+	SMALLTEXT = int(SCH/30)
+	MIDTEXT = int(SCH/25)
+	LARGETEXT = int(SCH/15)
+	MASSIVETEXT = int(SCH/8)
+	titlefontObj = pygame.font.Font(scriptpath+'/Fonts/Alien_League.ttf', int(LARGETEXT))
+	levelfontObj = pygame.font.Font(scriptpath+'/Fonts/Alien_League.ttf', int(MIDTEXT))
+	textfontObj = pygame.font.Font(scriptpath+'/Fonts/Alien_League.ttf', int(SMALLTEXT))
 
 	mbg = pygame.image.load(scriptpath+"/graphic_data/MainBG.jpg")
 	mbg = pygame.transform.scale(mbg, (SCW, SCH))
@@ -291,7 +291,7 @@ def main():
 					auto_ = 'Auto: {0}'.format(AUTO)
 					initdeal_ = 'Initial Deal: {0}'.format(IDEAL)
 					
-            				DISPLAYSURF.fill(DARKERGREEN)
+					DISPLAYSURF.fill(DARKERGREEN)
 					submenu_items = (name_, ai_,auto_,initdeal_, back_)
 
 					

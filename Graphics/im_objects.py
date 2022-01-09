@@ -84,7 +84,8 @@ class table_card(pygame.sprite.Sprite):
 			self.image, self.rect = load.load_img('cback.jpg')
 
 
-	def is_mouse_selection(self, (posx, posy)):
+	def is_mouse_selection(self, pos):
+		posx, posy = pos[:]
 		if self.rect.collidepoint(posx, posy):
 			return True
 		return False
@@ -142,7 +143,8 @@ class player_box(object):
 			self.cards.append(table_card(self.player.hand[icard], position, self.csize, self.player.show))
 
 	
-	def is_mouse_selection(self, (posx, posy)):
+	def is_mouse_selection(self, pos):
+		posx, posy = pos[:]
 		if self.rect.collidepoint(posx, posy):
 			return True
 		return False
@@ -243,7 +245,8 @@ class stats_box(object):
 	def reset(self):
 		self.update('')
 
-	def is_mouse_selection(self, (posx, posy)):
+	def is_mouse_selection(self, pos):
+		posx, posy = pos[:]
 		if self.rect.collidepoint(posx, posy):
 			return True
 		return False
@@ -312,7 +315,9 @@ class dealer_box(object):
 			position = (int(pc[0]+ps[0]), int(pc[1]+ps[1]))
 			self.cards.append(table_card(table.hand[icard], position, self.csize, True))
 
-	def is_mouse_selection(self, (posx, posy)):
+	def is_mouse_selection(self, pos):
+		
+		posx, posy = pos[:]
 		print(posx, posy)
 		
 		if self.rect.collidepoint(posx, posy):
